@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NESkit API Documentation</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 2em;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1, h2, h3 {
+            color: #446;
+        }
+
+        h1 {
+            border-bottom: 2px solid #446;
+            padding-bottom: 0.5em;
+        }
+
+        h2 {
+            margin-top: 1.5em;
+            border-bottom: 1px solid #446;
+            padding-bottom: 0.25em;
+        }
+
+        h3 {
+            margin-top: 1.2em;
+        }
+
+        code {
+            background-color: #eee;
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        pre {
+            background-color: #eee;
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1em;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+        .section {
+            margin-bottom: 2em;
+        }
+        .function {
+            margin-bottom: 1.5em;
+            border: 1px solid #ddd;
+            padding: 1em;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+        .function h3 {
+            margin-top: 0;
+            margin-bottom: 0.5em;
+        }
+        .params-table {
+            margin-top: 0.5em;
+        }
+        .return-value {
+            margin-top: 0.5em;
+        }
+    </style>
+</head>
+<body>
+    <h1>NESkit API Documentation</h1>
+
+    <p>
+        NESkit is a single-file NES game development library designed for use with the cc65 compiler.  It provides a simplified interface for common NES programming tasks, making it easier to create games for the original Nintendo Entertainment System hardware.
+    </p>
+
+    <div class="section">
+        <h2>Constants</h2>
+
+        <p>NESkit defines several constants for hardware parameters, memory locations, controller buttons, and PPU flags.</p>
+
+        <h3>Hardware Constants</h3>
+        <ul>
+            <li><code>NES_WIDTH</code>: Screen width (256 pixels)</li>
+            <li><code>NES_HEIGHT</code>: Screen height (240 pixels)</li>
+            <li><code>NES_PALETTE_SIZE</code>: Size of the palette (64 colors)</li>
+            <li><code>NES_SPRITES_MAX</code>: Maximum number of sprites (64)</li>
+            <li><code>NES_PATTERN_TABLES</code>: Number of pattern tables (2)</li>
+            <li><code>NES_PATTERNS_PER_TABLE</code>: Number of patterns per table (256)</li>
+            <li><code>NES_NAMETABLE_SIZE</code>: Size of a nametable (960 bytes)</li>
+            <li><code>NES_ATTRIBUTE_SIZE</code>: Size of the attribute table (64 bytes)</li>
+        </ul>
+        <h3>Memory Locations</h3>
+        <ul>
+          <li><code>PPU_CTRL</code>, <code>PPU_MASK</code>, <code>PPU_STATUS</code>, etc.:  Volatile pointers to PPU and APU registers.  See the NES development wiki for details on their usage.</li>
+        </ul>
+
+        <h3>Controller Buttons</h3>
+        <p>
+            Constants representing the bits for each button in the controller byte: <code>BTN_A</code>, <code>BTN_B</code>, <code>BTN_SELECT</code>, <code>BTN_START</code>, <code>BTN_UP</code>, <code>BTN_DOWN</code>, <code>BTN_LEFT</code>, <code>BTN_RIGHT</code>.
+        </p>
+
+        <h3>PPU Control Flags</h3>
+            <p>Bit flags for <code>PPU_CTRL</code>: <code>PPUCTRL_NMI</code>, <code>PPUCTRL_MASTER_SLAVE</code>, <code>PPUCTRL_SPRITE_SIZE</code>, etc.</p>
+
+        <h3>PPU Mask Flags</h3>
+            <p>Bit flags for <code>PPU_MASK</code>: <code>PPUMASK_BLUE</code>, <code>PPUMASK_GREEN</code>, <code>PPUMASK_RED</code>, etc.</p>
+
+        <h3>Audio Channels</h3>
+        <ul>
+          <li><code>CHANNEL_PULSE1</code></li>
+          <li><code>CHANNEL_PULSE2</code></li>
+          <li><code>CHANNEL_TRIANGLE</code></li>
+          <li><code>CHANNEL_NOISE</code></li>
+          <li><code>CHANNEL_DMC</code></li>
+        </ul>
+    </div>
+    <div class="section">
+       <h2>NESkit_State</h2>
+       <p>The core structure that contains most of the NESkit state information.  This structure is managed internally by NESkit, but you may access its members directly for more advanced control.</p>
+
+       <pre><code>
+       typedef struct {
+           uint8_t oam_buffer[256];     // Sprite attribute memory buffer
+           uint8_t palette_buffer[32];  // Palette memory buffer
+
+           uint8_t controller[2];       // Controller state
+           uint8_t controller_prev[2];  // Previous controller state
+
+           uint8_t scroll_x;            // Scroll position X
+           uint8_t scroll_y;            // Scroll position Y
+
+           uint8_t frame_count;         // Frame counter
+           uint8_t nmi_ready;           // NMI ready flag
+
+           // Map data
+           uint8_t *map_data;
+           uint8_t map_width;
+           uint8_t map_height;
+
+           // Audio state
+           uint8_t audio_enabled;
+
+           // Custom game state pointer
+           void *game_state;
+       } NESkit_State;
+       </code></pre>
+
+    </div>
+
+    <div class="section">
+        <h2>Functions</h2>
+        <div class="function">
+          <h3><code>void neskit_init(void)</code></h3>
+          <p>Initializes the NESkit library.  Must be called before any other NESkit functions.  Sets up the PPU, APU, clears OAM, initializes the state, and enables rendering.</p>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_update(void)</code></h3>
+            <p>Updates the NESkit library state.  This function reads the controllers, updates the frame counter, and performs other necessary per-frame updates.  Call this function once per frame, before your game logic.</p>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_wait_frame(void)</code></h3>
+            <p>Waits for the next vertical blank (NMI).  This function blocks until the NMI occurs, ensuring your game runs at the correct frame rate.</p>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_set_sprite(uint8_t id, uint8_t x, uint8_t y, uint8_t tile, uint8_t attr)</code></h3>
+            <p>Sets the properties of a single sprite in the OAM buffer.  This function does <em>not</em> directly write to OAM; the changes are applied during the next NMI.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>id</code></td><td><code>uint8_t</code></td><td>The sprite ID (0-63).</td></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X position of the sprite.</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y position of the sprite.</td></tr>
+                <tr><td><code>tile</code></td><td><code>uint8_t</code></td><td>The tile index from the pattern table.</td></tr>
+                <tr><td><code>attr</code></td><td><code>uint8_t</code></td><td>The sprite attributes (palette, flipping, priority).</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_load_pattern(uint8_t table, uint8_t id, const uint8_t *data)</code></h3>
+            <p>Loads a single 16-byte pattern (tile) into the specified pattern table.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>table</code></td><td><code>uint8_t</code></td><td>The pattern table (0 or 1).</td></tr>
+                <tr><td><code>id</code></td><td><code>uint8_t</code></td><td>The pattern ID (0-255).</td></tr>
+                <tr><td><code>data</code></td><td><code>const uint8_t *</code></td><td>A pointer to the 16-byte pattern data.</td></tr>
+            </table>
+        </div>
+
+          <div class="function">
+            <h3><code>void neskit_load_patterns(uint8_t table, const uint8_t *data, uint8_t count)</code></h3>
+            <p>Loads multiple patterns into a pattern table.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>table</code></td><td><code>uint8_t</code></td><td>The pattern table to load into (0 or 1).</td></tr>
+                <tr><td><code>data</code></td><td><code>const uint8_t *</code></td><td>A pointer to the pattern data.</td></tr>
+                <tr><td><code>count</code></td><td><code>uint8_t</code></td><td>The number of patterns to load.</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_set_palette(uint8_t id, uint8_t color)</code></h3>
+          <p>Sets a single color in the palette.</p>
+          <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>id</code></td><td><code>uint8_t</code></td><td>Index into the palette buffer. 0-31</td></tr>
+                <tr><td><code>color</code></td><td><code>uint8_t</code></td><td>NES color value.</td></tr>
+          </table>
+      </div>
+
+      <div class="function">
+          <h3><code>void neskit_set_bg_palette(uint8_t palette, uint8_t c0, uint8_t c1, uint8_t c2, uint8_t c3)</code></h3>
+          <p>Sets a background palette (4 colors).</p>
+          <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>palette</code></td><td><code>uint8_t</code></td><td>The background palette index (0-3).</td></tr>
+            <tr><td><code>c0</code></td><td><code>uint8_t</code></td><td>The first color.</td></tr>
+            <tr><td><code>c1</code></td><td><code>uint8_t</code></td><td>The second color.</td></tr>
+            <tr><td><code>c2</code></td><td><code>uint8_t</code></td><td>The third color.</td></tr>
+            <tr><td><code>c3</code></td><td><code>uint8_t</code></td><td>The fourth color.</td></tr>
+          </table>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_set_sprite_palette(uint8_t palette, uint8_t c0, uint8_t c1, uint8_t c2, uint8_t c3)</code></h3>
+            <p>Sets a sprite palette (4 colors).</p>
+             <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>palette</code></td><td><code>uint8_t</code></td><td>The sprite palette index (0-3).</td></tr>
+                <tr><td><code>c0</code></td><td><code>uint8_t</code></td><td>The first color.</td></tr>
+                <tr><td><code>c1</code></td><td><code>uint8_t</code></td><td>The second color.</td></tr>
+                <tr><td><code>c2</code></td><td><code>uint8_t</code></td><td>The third color.</td></tr>
+                <tr><td><code>c3</code></td><td><code>uint8_t</code></td><td>The fourth color.</td></tr>
+              </table>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_set_tile(uint8_t x, uint8_t y, uint8_t tile)</code></h3>
+            <p>Sets a tile in the nametable.</p>
+              <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate of the tile (0-31).</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate of the tile (0-29).</td></tr>
+                <tr><td><code>tile</code></td><td><code>uint8_t</code></td><td>The tile index.</td></tr>
+              </table>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_set_tile_attr(uint8_t x, uint8_t y, uint8_t attr)</code></h3>
+          <p>Sets the attribute (palette) of a 2x2 tile area in the attribute table. Note that this affects a 2x2 area of tiles, not a single tile.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate of the tile (0-31).</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate of the tile (0-29).</td></tr>
+                <tr><td><code>attr</code></td><td><code>uint8_t</code></td><td>The palette index (0-3).</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_load_nametable(const uint8_t *data)</code></h3>
+            <p>Loads an entire nametable and attribute table (1024 bytes) into VRAM.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>data</code></td><td><code>const uint8_t *</code></td><td>A pointer to the nametable data (960 bytes nametable + 64 bytes attribute table).</td></tr>
+            </table>
+        </div>
+      <div class="function">
+          <h3><code>void neskit_fill_nametable(uint8_t tile)</code></h3>
+          <p>Fills the entire nametable with a single tile and clears the attribute table.</p>
+          <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+              <tr><td><code>tile</code></td><td><code>uint8_t</code></td><td>The tile index to fill with.</td></tr>
+          </table>
+      </div>
+       <div class="function">
+            <h3><code>uint8_t neskit_button(uint8_t player, uint8_t button)</code></h3>
+            <p>Checks if a button is currently held down.</p>
+            <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+              <tr><td><code>player</code></td><td><code>uint8_t</code></td><td>The player number (0 or 1).</td></tr>
+              <tr><td><code>button</code></td><td><code>uint8_t</code></td><td>The button constant (e.g., <code>BTN_A</code>).</td></tr>
+            </table>
+            <div class="return-value"><strong>Returns:</strong> <code>1</code> if the button is held down, <code>0</code> otherwise.</div>
+        </div>
+
+        <div class="function">
+            <h3><code>uint8_t neskit_button_pressed(uint8_t player, uint8_t button)</code></h3>
+            <p>Checks if a button was pressed this frame (went from not pressed to pressed).</p>
+             <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>player</code></td><td><code>uint8_t</code></td><td>The player number (0 or 1).</td></tr>
+                <tr><td><code>button</code></td><td><code>uint8_t</code></td><td>The button constant.</td></tr>
+              </table>
+            <div class="return-value"><strong>Returns:</strong> <code>1</code> if the button was pressed this frame, <code>0</code> otherwise.</div>
+        </div>
+
+        <div class="function">
+            <h3><code>uint8_t neskit_button_released(uint8_t player, uint8_t button)</code></h3>
+            <p>Checks if a button was released this frame (went from pressed to not pressed).</p>
+            <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+              <tr><td><code>player</code></td><td><code>uint8_t</code></td><td>The player number (0 or 1).</td></tr>
+              <tr><td><code>button</code></td><td><code>uint8_t</code></td><td>The button constant.</td></tr>
+            </table>
+            <div class="return-value"><strong>Returns:</strong> <code>1</code> if the button was released this frame, <code>0</code> otherwise.</div>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_set_scroll(uint8_t x, uint8_t y)</code></h3>
+          <p>Sets the scroll position of the background.</p>
+           <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+              <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X scroll position.</td></tr>
+              <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y scroll position.</td></tr>
+          </table>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_play_note(uint8_t channel, uint8_t note, uint8_t volume, uint8_t duration)</code></h3>
+          <p>Plays a note on a specified audio channel.  This is a very basic sound implementation and should be expanded upon for more complex audio.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>channel</code></td><td><code>uint8_t</code></td><td>The audio channel (<code>CHANNEL_PULSE1</code>, <code>CHANNEL_PULSE2</code>, etc.).</td></tr>
+                <tr><td><code>note</code></td><td><code>uint8_t</code></td><td>The note value (period).  See the NES development wiki for specific values.  Helper defines like <code>NOTE_C4</code> are provided.</td></tr>
+                <tr><td><code>volume</code></td><td><code>uint8_t</code></td><td>The volume (0-15).</td></tr>
+                <tr><td><code>duration</code></td><td><code>uint8_t</code></td><td>The duration of the note (approximate, in frames, depends on the channel).</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_stop_note(uint8_t channel)</code></h3>
+          <p>Stops the currently playing note on the specified channel.</p>
+           <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>channel</code></td><td><code>uint8_t</code></td><td>The audio channel to stop.</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_load_map(const uint8_t *data, uint8_t width, uint8_t height)</code></h3>
+          <p>Loads map data into the NESkit state. This sets the map dimensions and stores a pointer to the map data, but doesn't copy it.</p>
+           <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>data</code></td><td><code>const uint8_t *</code></td><td>A pointer to the map data.</td></tr>
+                <tr><td><code>width</code></td><td><code>uint8_t</code></td><td>The width of the map, in tiles.</td></tr>
+                <tr><td><code>height</code></td><td><code>uint8_t</code></td><td>The height of the map, in tiles.</td></tr>
+          </table>
+        </div>
+        <div class="function">
+            <h3><code>uint8_t neskit_map_get(uint8_t x, uint8_t y)</code></h3>
+            <p>Gets the tile value at the specified coordinates in the loaded map.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate in the map.</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate in the map.</td></tr>
+            </table>
+            <div class="return-value">
+                <strong>Returns:</strong> The tile value at the given coordinates, or 0 if the coordinates are out of bounds or no map is loaded.
+            </div>
+        </div>
+
+      <div class="function">
+          <h3><code>void neskit_map_set(uint8_t x, uint8_t y, uint8_t value)</code></h3>
+          <p>Sets the tile value at the specified coordinates in the loaded map.  *Important:* This assumes the map data is in RAM and writable.</p>
+          <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+              <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate in the map.</td></tr>
+              <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate in the map.</td></tr>
+              <tr><td><code>value</code></td><td><code>uint8_t</code></td><td>The new tile value.</td></tr>
+          </table>
+      </div>
+    <div class="function">
+      <h3><code>void neskit_draw_map(uint8_t map_x, uint8_t map_y, uint8_t screen_x, uint8_t screen_y, uint8_t width, uint8_t height)</code></h3>
+      <p>Draws a section of the loaded map to the screen (nametable).</p>
+        <table class="params-table">
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+          <tr><td><code>map_x</code></td><td><code>uint8_t</code></td><td>The starting X coordinate in the map.</td></tr>
+          <tr><td><code>map_y</code></td><td><code>uint8_t</code></td><td>The starting Y coordinate in the map.</td></tr>
+          <tr><td><code>screen_x</code></td><td><code>uint8_t</code></td><td>The starting X coordinate on the screen (0-31).</td></tr>
+          <tr><td><code>screen_y</code></td><td><code>uint8_t</code></td><td>The starting Y coordinate on the screen (0-29).</td></tr>
+          <tr><td><code>width</code></td><td><code>uint8_t</code></td><td>The width of the section to draw, in tiles.</td></tr>
+          <tr><td><code>height</code></td><td><code>uint8_t</code></td><td>The height of the section to draw, in tiles.</td></tr>
+        </table>
+    </div>
+
+    <div class="function">
+        <h3><code>void neskit_set_game_state(void *state)</code></h3>
+        <p>Sets a pointer to custom game state data. This allows you to associate your own data structures with the NESkit library.</p>
+          <table class="params-table">
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>state</code></td><td><code>void *</code></td><td>A pointer to your custom game state data.</td></tr>
+        </table>
+      </div>
+    <div class="function">
+      <h3><code>void* neskit_get_game_state(void)</code></h3>
+      <p>Retrieves the pointer to your custom game state data.</p>
+        <div class="return-value"><strong>Returns:</strong> The pointer to your custom game state data.</div>
+    </div>
+
+     <div class="function">
+      <h3><code>uint8_t neskit_collision(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1, uint8_t x2, uint8_t y2, uint8_t w2, uint8_t h2)</code></h3>
+      <p>Checks for a collision between two rectangular areas.</p>
+        <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>x1</code>, <code>y1</code></td><td><code>uint8_t</code></td><td>Top-left coordinates of the first rectangle.</td></tr>
+            <tr><td><code>w1</code>, <code>h1</code></td><td><code>uint8_t</code></td><td>Width and height of the first rectangle.</td></tr>
+            <tr><td><code>x2</code>, <code>y2</code></td><td><code>uint8_t</code></td><td>Top-left coordinates of the second rectangle.</td></tr>
+            <tr><td><code>w2</code>, <code>h2</code></td><td><code>uint8_t</code></td><td>Width and height of the second rectangle.</td></tr>
+        </table>
+       <div class="return-value"><strong>Returns:</strong> <code>1</code> if a collision is detected, <code>0</code> otherwise.</div>
+    </div>
+    <div class="function">
+        <h3><code>uint8_t neskit_rand(void)</code></h3>
+        <p>Generates a pseudo-random 8-bit number.</p>
+        <div class="return-value"><strong>Returns:</strong> A pseudo-random number between 0 and 255.</div>
+    </div>
+
+    <div class="function">
+        <h3><code>void neskit_seed_rand(uint16_t seed_value)</code></h3>
+        <p>Seeds the pseudo-random number generator. Use this to change initial seed.</p>
+    </div>
+
+        <div class="function">
+          <h3><code>void neskit_print(uint8_t x, uint8_t y, const char *text, uint8_t tile_offset)</code></h3>
+          <p>Prints a string of text to the screen, using the nametable.  Characters are mapped to tile indices starting at the given offset.</p>
+          <table class="params-table">
+              <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate of the first character.</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate of the text.</td></tr>
+                <tr><td><code>text</code></td><td><code>const char *</code></td><td>The null-terminated string to print.</td></tr>
+                <tr><td><code>tile_offset</code></td><td><code>uint8_t</code></td><td>An offset added to each character's ASCII value to get the tile index.</td></tr>
+          </table>
+        </div>
+    <div class="function">
+        <h3><code>int16_t neskit_sin(uint8_t angle)</code></h3>
+        <p>Calculates the sine of an angle using a lookup table. The angle is represented as an 8-bit value (0-255), where 256 represents a full circle (360 degrees).</p>
+         <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>angle</code></td><td><code>uint8_t</code></td><td>The angle (0-255).</td></tr>
+        </table>
+        <div class="return-value"><strong>Returns:</strong> The sine of the angle, scaled by 100 (i.e., a value of 95 represents 0.95). Range is approximately -95 to 95</div>
+    </div>
+
+    <div class="function">
+        <h3><code>int16_t neskit_cos(uint8_t angle)</code></h3>
+        <p>Calculates the cosine of an angle using a lookup table (by offsetting the sine function).</p>
+        <table class="params-table">
+          <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>angle</code></td><td><code>uint8_t</code></td><td>The angle (0-255).</td></tr>
+          </table>
+        <div class="return-value"><strong>Returns:</strong> The cosine of the angle, scaled by 100. Range is approximately -95 to 95</div>
+    </div>
+     <div class="function">
+      <h3><code>void neskit_draw_metasprite(uint8_t x, uint8_t y, const MetaspriteEntry *data, uint8_t count, uint8_t sprite_start)</code></h3>
+      <p>Draws a metasprite (a collection of sprites treated as a single unit).</p>
+        <pre><code>
+        typedef struct {
+            uint8_t x_offset;
+            uint8_t y_offset;
+            uint8_t tile;
+            uint8_t attr;
+        } MetaspriteEntry;
+        </code></pre>
+         <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X position of the metasprite.</td></tr>
+            <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y position of the metasprite.</td></tr>
+            <tr><td><code>data</code></td><td><code>const MetaspriteEntry *</code></td><td>A pointer to an array of <code>MetaspriteEntry</code> structures.</td></tr>
+            <tr><td><code>count</code></td><td><code>uint8_t</code></td><td>The number of entries in the <code>data</code> array.</td></tr>
+            <tr><td><code>sprite_start</code></td><td><code>uint8_t</code></td><td>The starting sprite ID to use.</td></tr>
+        </table>
+    </div>
+
+     <div class="function">
+        <h3><code>uint8_t neskit_get_animation_frame(const AnimationDef *anim, uint8_t timer)</code></h3>
+        <p>Calculates the current frame of an animation based on a timer and animation definition.</p>
+         <pre><code>
+          typedef struct {
+              uint8_t start_tile;
+              uint8_t num_frames;
+              uint8_t speed;
+          } AnimationDef;</code></pre>
+         <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>anim</code></td><td><code>const AnimationDef *</code></td><td>A pointer to the animation definition.</td></tr>
+            <tr><td><code>timer</code></td><td><code>uint8_t</code></td><td>A timer value that increments each frame (or at your desired animation rate).</td></tr>
+        </table>
+         <div class="return-value"><strong>Returns:</strong> The tile index of the current animation frame.</div>
+    </div>
+
+    <div class="function">
+        <h3><code>void neskit_set_attribute_area(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint8_t palette)</code></h3>
+        <p>Sets the palette for a rectangular area of tiles in the attribute table.  This function simplifies setting the palette for larger areas.</p>
+         <table class="params-table">
+           <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+           <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The starting X coordinate of the area (in tile coordinates).</td></tr>
+            <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The starting Y coordinate of the area (in tile coordinates).</td></tr>
+            <tr><td><code>width</code></td><td><code>uint8_t</code></td><td>The width of the area, in tiles.</td></tr>
+            <tr><td><code>height</code></td><td><code>uint8_t</code></td><td>The height of the area, in tiles.</td></tr>
+            <tr><td><code>palette</code></td><td><code>uint8_t</code></td><td>The palette index (0-3) to apply to the entire area.</td></tr>
+        </table>
+    </div>
+
+    <div class="function">
+      <h3><code>void neskit_copy_tile_area(uint8_t src_x, uint8_t src_y, uint8_t width, uint8_t height, uint8_t dst_x, uint8_t dst_y)</code></h3>
+      <p>Copies a rectangular area of tiles from one location in the nametable to another.</p>
+         <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>src_x</code></td><td><code>uint8_t</code></td><td>The starting X coordinate of the source area.</td></tr>
+            <tr><td><code>src_y</code></td><td><code>uint8_t</code></td><td>The starting Y coordinate of the source area.</td></tr>
+            <tr><td><code>width</code></td><td><code>uint8_t</code></td><td>The width of the area to copy, in tiles.</td></tr>
+            <tr><td><code>height</code></td><td><code>uint8_t</code></td><td>The height of the area to copy, in tiles.</td></tr>
+            <tr><td><code>dst_x</code></td><td><code>uint8_t</code></td><td>The starting X coordinate of the destination area.</td></tr>
+            <tr><td><code>dst_y</code></td><td><code>uint8_t</code></td><td>The starting Y coordinate of the destination area.</td></tr>
+        </table>
+    </div>
+
+    <div class="function">
+          <h3><code>void neskit_init_audio(void)</code></h3>
+          <p>Initializes the extended audio system (note tracks).</p>
+    </div>
+
+    <div class="function">
+          <h3><code>void neskit_update_audio(void)</code></h3>
+          <p>Updates the extended audio system (processes note timers and stops notes when their duration expires).</p>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_play_note_track(uint8_t track, uint8_t channel, uint8_t note, uint8_t volume, uint8_t duration)</code></h3>
+            <p>Plays a note on a specific track, using the extended audio system.  This allows for multiple simultaneous notes.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>track</code></td><td><code>uint8_t</code></td><td>The track number (0-3).</td></tr>
+                <tr><td><code>channel</code></td><td><code>uint8_t</code></td><td>The audio channel (<code>CHANNEL_PULSE1</code>, etc.).</td></tr>
+                <tr><td><code>note</code></td><td><code>uint8_t</code></td><td>The note value (period).</td></tr>
+                <tr><td><code>volume</code></td><td><code>uint8_t</code></td><td>The volume (0-15).</td></tr>
+                <tr><td><code>duration</code></td><td><code>uint8_t</code></td><td>The duration of the note (in frames).</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+            <h3><code>void neskit_init_particles(void)</code></h3>
+            <p>Initializes the particle system.</p>
+        </div>
+
+        <div class="function">
+           <h3><code>void neskit_update_particles(void)</code></h3>
+           <p>Updates the particle system (moves particles, updates their lifetimes, and renders them).</p>
+        </div>
+
+	        <div class="function">
+            <h3><code>void neskit_create_particle(uint8_t x, uint8_t y, int8_t vx, int8_t vy, uint8_t life, uint8_t sprite_id, uint8_t tile, uint8_t attr)</code></h3>
+            <p>Creates a new particle with the specified parameters.</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The initial X position of the particle.</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The initial Y position of the particle.</td></tr>
+                <tr><td><code>vx</code></td><td><code>int8_t</code></td><td>The horizontal velocity of the particle.</td></tr>
+                <tr><td><code>vy</code></td><td><code>int8_t</code></td><td>The vertical velocity of the particle.</td></tr>
+                <tr><td><code>life</code></td><td><code>uint8_t</code></td><td>The lifetime of the particle (in frames).</td></tr>
+                <tr><td><code>sprite_id</code></td><td><code>uint8_t</code></td><td>The sprite ID to use for the particle.</td></tr>
+                <tr><td><code>tile</code></td><td><code>uint8_t</code></td><td>The tile index for the particle's sprite.</td></tr>
+                <tr><td><code>attr</code></td><td><code>uint8_t</code></td><td>The sprite attributes for the particle.</td></tr>
+            </table>
+        </div>
+    <div class="function">
+      <h3><code>void neskit_physics_update(PhysicsBody *body)</code></h3>
+        <p>Updates the position and velocity of a physics body, applying gravity and basic ground collision.</p>
+        <pre><code>
+        typedef struct {
+            int16_t x;       // Fixed-point position (8.8)
+            int16_t y;       // Fixed-point position (8.8)
+            int16_t vx;      // Fixed-point velocity (8.8)
+            int16_t vy;      // Fixed-point velocity (8.8)
+            uint8_t width;   // Collision width
+            uint8_t height;  // Collision height
+            uint8_t on_ground; // Ground collision flag
+        } PhysicsBody;
+
+        #define GRAVITY 0x40 // 0.25 in fixed point
+        </code></pre>
+         <table class="params-table">
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>body</code></td><td><code>PhysicsBody *</code></td><td>A pointer to the <code>PhysicsBody</code> structure to update.</td></tr>
+        </table>
+    </div>
+
+        <div class="function">
+           <h3><code>void neskit_debug_print_hex(uint8_t x, uint8_t y, uint8_t value)</code></h3>
+           <p>Prints a hexadecimal representation of an 8-bit value to the screen (for debugging).</p>
+            <table class="params-table">
+                <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate.</td></tr>
+                <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate.</td></tr>
+                <tr><td><code>value</code></td><td><code>uint8_t</code></td><td>The value to print.</td></tr>
+            </table>
+        </div>
+
+        <div class="function">
+          <h3><code>void neskit_debug_print_dec(uint8_t x, uint8_t y, uint8_t value)</code></h3>
+            <p>Prints a decimal representation of an 8-bit value to the screen (for debugging).</p>
+            <table class="params-table">
+               <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+               <tr><td><code>x</code></td><td><code>uint8_t</code></td><td>The X coordinate.</td></tr>
+               <tr><td><code>y</code></td><td><code>uint8_t</code></td><td>The Y coordinate.</td></tr>
+                <tr><td><code>value</code></td><td><code>uint8_t</code></td><td>The value to print.</td></tr>
+           </table>
+        </div>
+
+    </div>
+    <div class="section">
+    <h2>Game Entry Points</h2>
+        <p>These functions <b>must</b> be implemented by your game code:</p>
+        <ul>
+            <li><code>void game_init(void);</code>: Called once at the start of the game, after NESkit initialization.  Use this for game-specific setup.</li>
+            <li><code>void game_update(void);</code>: Called once per frame, after <code>neskit_update()</code>.  This is where your game logic should go.</li>
+            <li><code>void game_render(void);</code>: Called once per frame, after <code>game_update()</code>. This is where you should draw your game to the screen (set sprites, tiles, etc.).</li>
+        </ul>
+        <p>The <code>main</code> function in NESkit handles calling these functions in the correct order within the game loop.</p>
+
+    </div>
+
+    <div class="section">
+      <h2>Internal Handlers</h2>
+      <p>These are the NMI and IRQ handlers.  NESkit provides default implementations. You generally should *not* override these unless you have very specific needs.</p>
+
+        <ul>
+            <li><code>void __fastcall__ nmi_handler(void);</code>: The Non-Maskable Interrupt handler.  This is called by the PPU at the start of every vertical blank.  NESkit's implementation handles updating OAM, palettes, and scroll, and sets the <code>nmi_ready</code> flag.</li>
+            <li><code>void __fastcall__ irq_handler(void);</code>: The Interrupt Request handler.  NESkit's default implementation is empty.</li>
+        </ul>
+    </div>
+</body>
+</html>
