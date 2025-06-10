@@ -1,0 +1,2961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Game Maker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-retro: 'Press Start 2P', cursive;
+            --color-bg: #1E1E1E;
+            --color-bg-light: #2D2D2D;
+            --color-bg-lighter: #3C3C3C;
+            --color-text: #E0E0E0;
+            --color-primary: #00FF00; /* Neon Green */
+            --color-secondary: #FF00FF; /* Neon Pink */
+            --color-accent: #00FFFF; /* Neon Cyan */
+            --color-error: #FF4136;
+            --border-color: #555;
+            --grid-line-color: #444;
+            --selected-color: var(--color-accent);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-retro);
+            font-size: 10px; /* Base for rem units, adjust as needed */
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        button, input, select, textarea {
+            font-family: var(--font-retro);
+            font-size: 0.8rem;
+            background-color: var(--color-bg-lighter);
+            color: var(--color-text);
+            border: 1px solid var(--border-color);
+            padding: 5px;
+            margin: 2px;
+        }
+        button:hover {
+            background-color: #4A4A4A;
+            border-color: var(--color-primary);
+        }
+        button:active {
+            background-color: #5A5A5A;
+        }
+        input[type="color"] {
+            padding: 0;
+            border: none;
+            width: 30px;
+            height: 30px;
+        }
+        input[type="text"], textarea {
+            padding: 8px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .toolbar {
+            background-color: var(--color-bg-light);
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .toolbar > span { margin-right: 10px; }
+        .toolbar select { margin-right: 5px; }
+
+        .main-content {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .workspace {
+            flex-grow: 1;
+            padding: 10px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align content to top */
+        }
+        .workspace > div { width: 100%; } /* Ensure sections take full width */
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--color-bg-light);
+            padding: 10px;
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+        }
+        .sidebar-section {
+            margin-bottom: 15px;
+        }
+        .sidebar-section h3 {
+            color: var(--color-primary);
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        .sidebar-list {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-list li {
+            padding: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .sidebar-list li:hover {
+            background-color: var(--color-bg-lighter);
+        }
+        .sidebar-list li.selected {
+            border-color: var(--selected-color);
+            background-color: #454545;
+        }
+
+
+        .status-bar {
+            background-color: var(--color-bg-light);
+            padding: 5px 10px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.7rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hidden { display: none !important; }
+
+        /* Sprite Editor Specific */
+        #sprite-editor-section {
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            align-items: center; /* Center items horizontally */
+            gap: 10px;
+        }
+        .sprite-editor-layout {
+            display: flex;
+            flex-direction: row; /* Main layout: tools | canvas | preview */
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+        .sprite-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        #sprite-canvas-container {
+            display: inline-block; /* To contain the canvas properly */
+            border: 1px solid var(--border-color);
+        }
+        #sprite-canvas {
+            display: block; /* Removes extra space below canvas */
+            image-rendering: pixelated; /* Sharp pixels */
+            background-color: #fff; /* For checkerboard */
+        }
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            width: calc(8 * 24px + 7 * 2px); /* 8 colors, 24px each, 2px gap */
+            margin-top: 10px;
+        }
+        .color-palette-button {
+            width: 24px;
+            height: 24px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .color-palette-button.selected {
+            border: 2px solid var(--selected-color);
+            transform: scale(1.1);
+        }
+        .sprite-preview-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .sprite-preview-area canvas {
+            border: 1px solid var(--border-color);
+            image-rendering: pixelated;
+            background-color: #777; /* Preview background */
+        }
+
+        /* Map Editor Specific */
+        #map-editor-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .map-editor-layout {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+        .map-tools { display: flex; flex-direction: column; gap: 5px; }
+        #map-canvas-container {
+            border: 1px solid var(--border-color);
+            overflow: auto; /* For panning if map is larger */
+            max-width: 600px; /* Limit canvas container width */
+            max-height: 400px; /* Limit canvas container height */
+        }
+        #map-canvas {
+            display: block;
+            image-rendering: pixelated;
+            background-color: #333; /* Map background */
+        }
+        .map-sprite-selector {
+            max-height: 300px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); /* Adjust tile size */
+            gap: 2px;
+            padding: 5px;
+            border: 1px solid var(--border-color);
+        }
+        .map-sprite-selector img {
+            width: 32px; /* Preview size */
+            height: 32px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            image-rendering: pixelated;
+        }
+        .map-sprite-selector img.selected {
+            border-color: var(--selected-color);
+            background-color: rgba(0, 255, 255, 0.3);
+        }
+        .layer-controls { margin-top: 10px; }
+
+        /* Code Editor Specific */
+        #code-editor-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* Fill workspace */
+            gap: 10px;
+        }
+        #game-code-editor {
+            width: 100%;
+            flex-grow: 1;
+            min-height: 200px;
+            background-color: #111;
+            color: #f0f0f0;
+            border: 1px solid var(--border-color);
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+        #code-console {
+            width: 100%;
+            height: 100px;
+            background-color: #111;
+            color: #ccc;
+            border: 1px solid var(--border-color);
+            padding: 5px;
+            overflow-y: auto;
+            font-size: 0.7rem;
+        }
+        #api-reference {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--color-bg-lighter);
+        }
+        #api-reference h4 { color: var(--color-secondary); margin-bottom: 3px; }
+        #api-reference p { margin-bottom: 8px; font-size: 0.75rem; }
+        #api-reference code { background-color: #444; padding: 1px 3px; border-radius: 3px; }
+
+        /* Play Mode Specific */
+        #play-mode-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #game-canvas-container {
+            border: 1px solid var(--color-primary);
+        }
+        #game-canvas {
+            display: block;
+            image-rendering: pixelated;
+            background-color: #000;
+        }
+        .crt-effect { position: relative; } /* For game canvas */
+        .crt-effect::after {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: repeating-linear-gradient(transparent, transparent 1px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 2px);
+            pointer-events: none;
+            z-index: 100;
+        }
+        /* Optional: flicker, more intense scanlines, etc. */
+
+        /* Modal */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: var(--color-bg-light);
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            width: 80%;
+            max-width: 400px;
+            color: var(--color-text);
+        }
+        .modal-content h2 { color: var(--color-primary); margin-bottom: 15px; }
+        .modal-content input[type="text"] { width: calc(100% - 16px); margin-bottom: 10px; }
+        .modal-buttons { text-align: right; }
+
+        /* Tooltips */
+        [data-tooltip] {
+            position: relative;
+        }
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-5px);
+            background-color: #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 1001; /* Above modals if any */
+        }
+        [data-tooltip]:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <span>Mode:</span>
+            <select id="mode-selector">
+                <option value="sprite">Sprite Editor</option>
+                <option value="map">Map Editor</option>
+                <option value="code">Code Editor</option>
+                <option value="play">Play</option>
+            </select>
+
+            <button id="new-project-btn" data-tooltip="New Project">New</button>
+            <button id="load-project-btn" data-tooltip="Load Project">Load</button>
+            <select id="project-list-dropdown" title="Select project to load"></select>
+            <button id="save-project-btn" data-tooltip="Save Project">Save</button>
+            <button id="delete-project-btn" data-tooltip="Delete Project">Delete</button>
+            <button id="import-project-btn" data-tooltip="Import Project (JSON)">Import</button>
+            <button id="export-project-btn" data-tooltip="Export Project (JSON)">Export Project</button>
+            <button id="export-game-btn" data-tooltip="Export Game (HTML)">Export Game</button>
+            <label><input type="checkbox" id="crt-filter-toggle"> CRT Filter</label>
+        </div>
+
+        <div class="main-content">
+            <div class="workspace">
+                <!-- Sprite Editor -->
+                <div id="sprite-editor-section" class="hidden">
+                    <h2>Sprite Editor</h2>
+                    <div class="sprite-editor-layout">
+                        <div class="sprite-tools">
+                            <button id="sprite-pencil-tool" data-tooltip="Pencil (P)">Pencil</button>
+                            <button id="sprite-eraser-tool" data-tooltip="Eraser (E)">Eraser</button>
+                            <button id="sprite-fill-tool" data-tooltip="Fill (F)">Fill</button>
+                            <button id="sprite-picker-tool" data-tooltip="Color Picker (K)">Picker</button>
+                            <hr>
+                            <button id="sprite-undo-btn" data-tooltip="Undo (Ctrl+Z)">Undo</button>
+                            <button id="sprite-redo-btn" data-tooltip="Redo (Ctrl+Y)">Redo</button>
+                            <hr>
+                            <label for="sprite-size-selector">Size:</label>
+                            <select id="sprite-size-selector">
+                                <option value="8">8x8</option>
+                                <option value="16">16x16</option>
+                            </select>
+                            <button id="clear-sprite-btn" data-tooltip="Clear Sprite">Clear</button>
+                        </div>
+                        <div>
+                            <div id="sprite-canvas-container">
+                                <canvas id="sprite-canvas"></canvas>
+                            </div>
+                            <div id="sprite-color-palette" class="color-palette"></div>
+                        </div>
+                        <div class="sprite-preview-area">
+                            <h3>Preview</h3>
+                            <canvas id="sprite-preview-1x"></canvas>
+                            <canvas id="sprite-preview-2x"></canvas>
+                            <canvas id="sprite-preview-4x"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <button id="sprite-import-json-btn">Import JSON</button>
+                        <input type="file" id="sprite-json-file-input" accept=".json" style="display:none;">
+                        <button id="sprite-export-json-btn">Export JSON</button>
+                        <button id="sprite-import-png-btn">Import PNG</button>
+                        <input type="file" id="sprite-png-file-input" accept=".png" style="display:none;">
+                        <button id="sprite-export-png-btn">Export PNG</button>
+                    </div>
+                </div>
+
+                <!-- Map Editor -->
+                <div id="map-editor-section" class="hidden">
+                    <h2>Map Editor</h2>
+                    <div class="map-editor-layout">
+                        <div class="map-tools">
+                            <button id="map-place-tool" data-tooltip="Place Tile (B)">Place</button>
+                            <button id="map-erase-tool" data-tooltip="Erase Tile (E)">Erase</button>
+                            <button id="map-fill-tool" data-tooltip="Fill Area (F)">Fill Area</button>
+                            <!-- Zoom/Pan controls could go here -->
+                            <label for="map-zoom-selector">Zoom:</label>
+                            <select id="map-zoom-selector">
+                                <option value="1">1x</option>
+                                <option value="2">2x</option>
+                                <option value="0.5">0.5x</option>
+                            </select>
+                        </div>
+                        <div id="map-canvas-container">
+                            <canvas id="map-canvas"></canvas>
+                        </div>
+                        <div class="map-sprite-selector-container">
+                            <h3>Tiles (Sprites)</h3>
+                            <div id="map-sprite-selector" class="map-sprite-selector">
+                                <!-- Sprites will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="layer-controls">
+                        <h3>Layers</h3>
+                        <select id="map-layer-selector"></select>
+                        <button id="add-map-layer-btn">Add Layer</button>
+                        <button id="remove-map-layer-btn">Remove Layer</button>
+                        <label><input type="checkbox" id="map-layer-visible-toggle"> Visible</label>
+                        <label>Type:
+                            <select id="map-layer-type-selector">
+                                <option value="tile">Tile Layer</option>
+                                <option value="collision">Collision Layer</option>
+                            </select>
+                        </label>
+                         <label><input type="checkbox" id="show-collision-layer-toggle"> Show Collision (Overlay)</label>
+                    </div>
+                </div>
+
+                <!-- Code Editor -->
+                <div id="code-editor-section" class="hidden">
+                    <h2>Code Editor</h2>
+                    <textarea id="game-code-editor" spellcheck="false"></textarea>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <div style="flex-grow:1;">
+                            <h3>Console</h3>
+                            <div id="code-console"></div>
+                        </div>
+                        <div style="width: 250px;">
+                            <h3>API Reference</h3>
+                            <div id="api-reference">
+                                <h4>Core Functions:</h4>
+                                <p><code>init()</code>: Called once to set up the game.</p>
+                                <p><code>update(dt)</code>: Called every frame. <code>dt</code> is delta time in seconds.</p>
+                                <p><code>draw()</code>: Called every frame to render.</p>
+                                <h4>Drawing:</h4>
+                                <p><code>sprite(id, x, y)</code>: Draws sprite by ID.</p>
+                                <p><code>tilemap(mapId, x, y, layerName)</code>: Draws a map layer.</p>
+                                <p><code>cls(color)</code>: Clears screen. <code>color</code> (optional) is hex string or palette index.</p>
+                                <p><code>rect(x, y, w, h, color)</code>: Draws a filled rectangle.</p>
+                                <p><code>rectb(x, y, w, h, color)</code>: Draws a rectangle border.</p>
+                                <p><code>circ(x, y, r, color)</code>: Draws a filled circle.</p>
+                                <p><code>circb(x, y, r, color)</code>: Draws a circle border.</p>
+                                <p><code>line(x1, y1, x2, y2, color)</code>: Draws a line.</p>
+                                <p><code>text(str, x, y, color)</code>: Draws text.</p>
+                                <h4>Input:</h4>
+                                <p><code>keyDown(keyName)</code>: Checks if key is pressed (e.g., "ArrowUp", "KeyA").</p>
+                                <p><code>keyUp(keyName)</code>: Checks if key was released this frame.</p>
+                                <p><code>keyPress(keyName)</code>: Checks if key was pressed this frame (repeats).</p>
+                                <h4>Collision & Map:</h4>
+                                <p><code>collide(x, y, w, h, mapId, layerName)</code>: Checks collision with solid tiles on a map layer.</p>
+                                <p><code>getTile(mapId, layerName, tileX, tileY)</code>: Gets tile ID at map coordinates.</p>
+                                <p><code>setTile(mapId, layerName, tileX, tileY, spriteId)</code>: Sets tile ID at map coordinates.</p>
+                                <h4>Sound (Basic):</h4>
+                                <p><code>sfx(id)</code>: Plays a sound effect (placeholder for now).</p>
+                                <h4>Utility:</h4>
+                                <p><code>rnd(max)</code>: Random integer 0 to max-1.</p>
+                                <p><code>rndf(max)</code>: Random float 0 to max.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Play Mode -->
+                <div id="play-mode-section" class="hidden">
+                    <h2>Play Mode</h2>
+                    <div>
+                        <button id="play-game-btn">Play</button>
+                        <button id="stop-game-btn">Stop</button>
+                        <button id="restart-game-btn">Restart</button>
+                    </div>
+                    <div id="game-canvas-container">
+                        <canvas id="game-canvas" width="256" height="240"></canvas> <!-- Common retro resolution -->
+                    </div>
+                </div>
+
+            </div>
+            <div class="sidebar">
+                <div id="sidebar-project-info" class="sidebar-section">
+                    <h3>Project: <span id="current-project-name">Untitled</span></h3>
+                    <label for="project-name-input">Name:</label>
+                    <input type="text" id="project-name-input" style="width: calc(100% - 10px);">
+                </div>
+
+                <div id="sidebar-sprites" class="sidebar-section hidden">
+                    <h3>Sprites</h3>
+                    <input type="text" id="new-sprite-name" placeholder="New sprite name">
+                    <button id="add-sprite-btn">Add Sprite</button>
+                    <ul id="sprite-list" class="sidebar-list"></ul>
+                    <button id="delete-sprite-btn">Delete Selected Sprite</button>
+                </div>
+
+                <div id="sidebar-maps" class="sidebar-section hidden">
+                    <h3>Maps</h3>
+                    <input type="text" id="new-map-name" placeholder="New map name">
+                    <button id="add-map-btn">Add Map</button>
+                    <ul id="map-list" class="sidebar-list"></ul>
+                    <button id="delete-map-btn">Delete Selected Map</button>
+                    <h4>Map Properties:</h4>
+                    <label for="map-width-input">Width (tiles):</label>
+                    <input type="number" id="map-width-input" min="1" value="32">
+                    <label for="map-height-input">Height (tiles):</label>
+                    <input type="number" id="map-height-input" min="1" value="32">
+                    <label for="map-tile-size-input">Tile Size (px):</label>
+                    <input type="number" id="map-tile-size-input" value="8" readonly title="Matches sprite size">
+                    <button id="resize-map-btn">Apply Size</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span id="status-message">Ready.</span>
+            <span id="cursor-coords">X: -, Y: -</span>
+        </div>
+    </div>
+
+    <!-- Modal for prompts -->
+    <div id="prompt-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="prompt-title">Prompt</h2>
+            <p id="prompt-message"></p>
+            <input type="text" id="prompt-input">
+            <div class="modal-buttons">
+                <button id="prompt-ok-btn">OK</button>
+                <button id="prompt-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const RGMApp = (() => {
+        // --- Constants ---
+        const DEFAULT_SPRITE_SIZE = 8;
+        const DEFAULT_MAP_WIDTH = 32;
+        const DEFAULT_MAP_HEIGHT = 32;
+        const MAX_UNDO_HISTORY = 50;
+        const AUTO_SAVE_INTERVAL = 60000; // 1 minute
+
+        const PALETTE = [
+            '#000000', '#1D2B53', '#7E2553', '#008751',
+            '#AB5236', '#5F574F', '#C2C3C7', '#FFF1E8',
+            '#FF004D', '#FFA300', '#FFEC27', '#00E436',
+            '#29ADFF', '#83769C', '#FF77A8', '#FFCCAA'
+        ];
+        const TRANSPARENT_COLOR = null; // Represents transparency
+
+        // --- State ---
+        let currentProject = createNewProject('Untitled');
+        let currentMode = 'sprite'; // sprite, map, code, play
+        let activeSpriteId = null;
+        let activeMapId = null;
+        let activeMapLayerIndex = 0;
+        let spriteUndoStack = [];
+        let spriteRedoStack = [];
+        let autoSaveTimer = null;
+
+        // Sprite Editor State
+        let spriteEditorTool = 'pencil'; // pencil, eraser, fill, picker
+        let selectedColor = PALETTE[0];
+        let spritePixelSize = 20; // Size of each pixel on the sprite editor canvas
+
+        // Map Editor State
+        let mapEditorTool = 'place'; // place, erase, fill
+        let selectedTileSpriteId = null;
+        let mapEditorZoom = 1;
+        let showCollisionOverlay = false;
+
+        // Game Runner State
+        let gameRunning = false;
+        let gameLoopId = null;
+        let gameCanvas, gameCtx;
+        let userGame = { init: null, update: null, draw: null };
+        let gameInputState = { keysDown: {}, keysPressed: {}, keysUp: {} };
+        let lastFrameTime = 0;
+
+        // --- DOM Elements ---
+        // Toolbar
+        const modeSelector = document.getElementById('mode-selector');
+        const newProjectBtn = document.getElementById('new-project-btn');
+        const loadProjectBtn = document.getElementById('load-project-btn');
+        const projectListDropdown = document.getElementById('project-list-dropdown');
+        const saveProjectBtn = document.getElementById('save-project-btn');
+        const deleteProjectBtn = document.getElementById('delete-project-btn');
+        const importProjectBtn = document.getElementById('import-project-btn');
+        const exportProjectBtn = document.getElementById('export-project-btn');
+        const exportGameBtn = document.getElementById('export-game-btn');
+        const crtFilterToggle = document.getElementById('crt-filter-toggle');
+
+        // Workspace Sections
+        const spriteEditorSection = document.getElementById('sprite-editor-section');
+        const mapEditorSection = document.getElementById('map-editor-section');
+        const codeEditorSection = document.getElementById('code-editor-section');
+        const playModeSection = document.getElementById('play-mode-section');
+
+        // Sidebar
+        const currentProjectNameDisplay = document.getElementById('current-project-name');
+        const projectNameInput = document.getElementById('project-name-input');
+        const sidebarSprites = document.getElementById('sidebar-sprites');
+        const newSpriteNameInput = document.getElementById('new-sprite-name');
+        const addSpriteBtn = document.getElementById('add-sprite-btn');
+        const spriteListUI = document.getElementById('sprite-list');
+        const deleteSpriteBtn = document.getElementById('delete-sprite-btn');
+        const sidebarMaps = document.getElementById('sidebar-maps');
+        const newMapNameInput = document.getElementById('new-map-name');
+        const addMapBtn = document.getElementById('add-map-btn');
+        const mapListUI = document.getElementById('map-list');
+        const deleteMapBtn = document.getElementById('delete-map-btn');
+        const mapWidthInput = document.getElementById('map-width-input');
+        const mapHeightInput = document.getElementById('map-height-input');
+        const mapTileSizeInput = document.getElementById('map-tile-size-input');
+        const resizeMapBtn = document.getElementById('resize-map-btn');
+
+
+        // Status Bar
+        const statusMessage = document.getElementById('status-message');
+        const cursorCoordsDisplay = document.getElementById('cursor-coords');
+
+        // Sprite Editor Elements
+        const spriteCanvas = document.getElementById('sprite-canvas');
+        const spriteCtx = spriteCanvas.getContext('2d');
+        const spriteColorPalette = document.getElementById('sprite-color-palette');
+        const spritePencilToolBtn = document.getElementById('sprite-pencil-tool');
+        const spriteEraserToolBtn = document.getElementById('sprite-eraser-tool');
+        const spriteFillToolBtn = document.getElementById('sprite-fill-tool');
+        const spritePickerToolBtn = document.getElementById('sprite-picker-tool');
+        const spriteUndoBtn = document.getElementById('sprite-undo-btn');
+        const spriteRedoBtn = document.getElementById('sprite-redo-btn');
+        const spriteSizeSelector = document.getElementById('sprite-size-selector');
+        const clearSpriteBtn = document.getElementById('clear-sprite-btn');
+        const spritePreview1x = document.getElementById('sprite-preview-1x');
+        const spritePreview2x = document.getElementById('sprite-preview-2x');
+        const spritePreview4x = document.getElementById('sprite-preview-4x');
+        const spriteImportJsonBtn = document.getElementById('sprite-import-json-btn');
+        const spriteJsonFileInput = document.getElementById('sprite-json-file-input');
+        const spriteExportJsonBtn = document.getElementById('sprite-export-json-btn');
+        const spriteImportPngBtn = document.getElementById('sprite-import-png-btn');
+        const spritePngFileInput = document.getElementById('sprite-png-file-input');
+        const spriteExportPngBtn = document.getElementById('sprite-export-png-btn');
+
+
+        // Map Editor Elements
+        const mapCanvas = document.getElementById('map-canvas');
+        const mapCtx = mapCanvas.getContext('2d');
+        const mapPlaceToolBtn = document.getElementById('map-place-tool');
+        const mapEraseToolBtn = document.getElementById('map-erase-tool');
+        const mapFillToolBtn = document.getElementById('map-fill-tool');
+        const mapZoomSelector = document.getElementById('map-zoom-selector');
+        const mapSpriteSelectorUI = document.getElementById('map-sprite-selector');
+        const mapLayerSelector = document.getElementById('map-layer-selector');
+        const addMapLayerBtn = document.getElementById('add-map-layer-btn');
+        const removeMapLayerBtn = document.getElementById('remove-map-layer-btn');
+        const mapLayerVisibleToggle = document.getElementById('map-layer-visible-toggle');
+        const mapLayerTypeSelector = document.getElementById('map-layer-type-selector');
+        const showCollisionLayerToggle = document.getElementById('show-collision-layer-toggle');
+
+
+        // Code Editor Elements
+        const gameCodeEditor = document.getElementById('game-code-editor');
+        const codeConsole = document.getElementById('code-console');
+
+        // Play Mode Elements
+        const playGameBtn = document.getElementById('play-game-btn');
+        const stopGameBtn = document.getElementById('stop-game-btn');
+        const restartGameBtn = document.getElementById('restart-game-btn');
+        const gameCanvasContainer = document.getElementById('game-canvas-container');
+        // gameCanvas and gameCtx are initialized in initPlayMode
+
+        // Modal Elements
+        const promptModal = document.getElementById('prompt-modal');
+        const promptTitle = document.getElementById('prompt-title');
+        const promptMessage = document.getElementById('prompt-message');
+        const promptInput = document.getElementById('prompt-input');
+        const promptOkBtn = document.getElementById('prompt-ok-btn');
+        const promptCancelBtn = document.getElementById('prompt-cancel-btn');
+        let promptResolve = null;
+
+
+        // --- Utility Functions ---
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        }
+
+        function logToConsole(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (type === 'error') entry.style.color = 'var(--color-error)';
+            if (type === 'warn') entry.style.color = 'var(--color-secondary)'; // Yellowish for warn
+            codeConsole.appendChild(entry);
+            codeConsole.scrollTop = codeConsole.scrollHeight;
+        }
+
+        function updateStatus(message) {
+            statusMessage.textContent = message;
+        }
+
+        function downloadFile(filename, content, mimeType = 'text/plain') {
+            const element = document.createElement('a');
+            element.setAttribute('href', `data:${mimeType};charset=utf-8,` + encodeURIComponent(content));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            updateStatus(`Exported ${filename}`);
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file);
+            });
+        }
+        
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showPrompt(title, message, defaultValue = "") {
+            promptTitle.textContent = title;
+            promptMessage.textContent = message;
+            promptInput.value = defaultValue;
+            promptModal.style.display = 'block';
+            promptInput.focus();
+            return new Promise((resolve) => {
+                promptResolve = resolve;
+            });
+        }
+
+        function hidePrompt() {
+            promptModal.style.display = 'none';
+            promptResolve = null;
+        }
+
+        // --- Project Management ---
+        function createNewProject(name) {
+            return {
+                id: generateId(),
+                name: name,
+                sprites: [],
+                maps: [],
+                gameCode: `// Welcome to Retro Game Maker!
+
+function init() {
+    // Game starts here
+    GameAPI.print("Game Initialized!");
+    // Example: create a player
+    // this.player = { x: 10, y: 10, speed: 50 };
+}
+
+function update(dt) {
+    // Game logic per frame
+    // Example: move player with arrow keys
+    /*
+    if (GameAPI.keyDown("ArrowUp")) this.player.y -= this.player.speed * dt;
+    if (GameAPI.keyDown("ArrowDown")) this.player.y += this.player.speed * dt;
+    if (GameAPI.keyDown("ArrowLeft")) this.player.x -= this.player.speed * dt;
+    if (GameAPI.keyDown("ArrowRight")) this.player.x += this.player.speed * dt;
+    */
+}
+
+function draw() {
+    // Drawing per frame
+    GameAPI.cls(1); // Clear screen with dark blue
+
+    GameAPI.text("Hello World!", 10, 10, 7);
+
+    // Example: draw player
+    // if (this.player) GameAPI.sprite("player_sprite_id", this.player.x, this.player.y);
+    
+    // Example: draw a map
+    // GameAPI.tilemap("map_id", 0, 0, "background");
+}
+`,
+                settings: {
+                    spriteSize: DEFAULT_SPRITE_SIZE,
+                    defaultMapWidth: DEFAULT_MAP_WIDTH,
+                    defaultMapHeight: DEFAULT_MAP_HEIGHT,
+                    defaultTileSize: DEFAULT_SPRITE_SIZE, // Should match spriteSize
+                    gameCanvasWidth: 256,
+                    gameCanvasHeight: 240,
+                }
+            };
+        }
+
+        function loadProject(projectData) {
+            if (typeof projectData === 'string') {
+                try {
+                    projectData = JSON.parse(projectData);
+                } catch (e) {
+                    logToConsole(`Error parsing project data: ${e.message}`, 'error');
+                    alert('Failed to load project: Invalid JSON data.');
+                    return;
+                }
+            }
+            currentProject = projectData;
+            // Ensure default settings if missing
+            currentProject.settings = {
+                ...{
+                    spriteSize: DEFAULT_SPRITE_SIZE,
+                    defaultMapWidth: DEFAULT_MAP_WIDTH,
+                    defaultMapHeight: DEFAULT_MAP_HEIGHT,
+                    defaultTileSize: DEFAULT_SPRITE_SIZE,
+                    gameCanvasWidth: 256,
+                    gameCanvasHeight: 240,
+                }, ...currentProject.settings
+            };
+
+            activeSpriteId = currentProject.sprites.length > 0 ? currentProject.sprites[0].id : null;
+            activeMapId = currentProject.maps.length > 0 ? currentProject.maps[0].id : null;
+            activeMapLayerIndex = 0;
+
+            projectNameInput.value = currentProject.name;
+            currentProjectNameDisplay.textContent = currentProject.name;
+            gameCodeEditor.value = currentProject.gameCode;
+            spriteSizeSelector.value = currentProject.settings.spriteSize;
+            mapTileSizeInput.value = currentProject.settings.defaultTileSize; // Should track spriteSize
+
+            refreshSpriteList();
+            refreshMapList();
+            if (activeSpriteId) loadSpriteIntoEditor(activeSpriteId);
+            if (activeMapId) loadMapIntoEditor(activeMapId);
+            
+            updateStatus(`Project "${currentProject.name}" loaded.`);
+            logToConsole(`Project "${currentProject.name}" loaded.`);
+            stopAutoSave(); // Stop previous auto-save if any
+            startAutoSave();
+        }
+
+        function saveCurrentProject() {
+            if (!currentProject.name || currentProject.name.trim() === "") {
+                alert("Project name cannot be empty.");
+                projectNameInput.focus();
+                return;
+            }
+            currentProject.gameCode = gameCodeEditor.value; // Make sure code is saved
+            try {
+                localStorage.setItem(`rgm_project_${currentProject.name}`, JSON.stringify(currentProject));
+                updateStatus(`Project "${currentProject.name}" saved.`);
+                logToConsole(`Project "${currentProject.name}" saved locally.`);
+                populateProjectListDropdown(); // Refresh dropdown
+            } catch (e) {
+                logToConsole(`Error saving project: ${e.message}`, 'error');
+                alert('Failed to save project. LocalStorage might be full.');
+            }
+        }
+
+        function handleNewProject() {
+            showPrompt("New Project", "Enter project name:", "MyGame").then(name => {
+                if (name) {
+                    if (localStorage.getItem(`rgm_project_${name}`)) {
+                        if (!confirm(`Project "${name}" already exists. Overwrite?`)) return;
+                    }
+                    currentProject = createNewProject(name);
+                    loadProject(currentProject); // This will also save it initially if saveCurrentProject is called
+                    saveCurrentProject(); // Save the new empty project
+                    updateStatus(`New project "${name}" created.`);
+                }
+            });
+        }
+
+        function handleLoadProject() {
+            const selectedProjectName = projectListDropdown.value;
+            if (selectedProjectName) {
+                const projectData = localStorage.getItem(`rgm_project_${selectedProjectName}`);
+                if (projectData) {
+                    loadProject(projectData);
+                } else {
+                    alert(`Error: Project "${selectedProjectName}" not found in local storage.`);
+                }
+            } else {
+                alert("No project selected to load.");
+            }
+        }
+        
+        function handleDeleteProject() {
+            const selectedProjectName = projectListDropdown.value;
+            if (selectedProjectName) {
+                if (confirm(`Are you sure you want to delete project "${selectedProjectName}"? This cannot be undone.`)) {
+                    localStorage.removeItem(`rgm_project_${selectedProjectName}`);
+                    populateProjectListDropdown();
+                    updateStatus(`Project "${selectedProjectName}" deleted.`);
+                    logToConsole(`Project "${selectedProjectName}" deleted.`);
+                    if (currentProject.name === selectedProjectName) {
+                        // If current project was deleted, load the first available or new one
+                        const projects = getSavedProjectNames();
+                        if (projects.length > 0) {
+                            loadProject(localStorage.getItem(`rgm_project_${projects[0]}`));
+                        } else {
+                            handleNewProject();
+                        }
+                    }
+                }
+            } else {
+                alert("No project selected to delete.");
+            }
+        }
+
+        function getSavedProjectNames() {
+            const projects = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('rgm_project_')) {
+                    projects.push(key.substring('rgm_project_'.length));
+                }
+            }
+            return projects.sort();
+        }
+
+        function populateProjectListDropdown() {
+            const projects = getSavedProjectNames();
+            projectListDropdown.innerHTML = '';
+            if (projects.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = "No saved projects";
+                option.disabled = true;
+                projectListDropdown.appendChild(option);
+            } else {
+                projects.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    projectListDropdown.appendChild(option);
+                });
+            }
+            if (currentProject && projects.includes(currentProject.name)) {
+                projectListDropdown.value = currentProject.name;
+            } else if (projects.length > 0) {
+                 projectListDropdown.value = projects[0]; // Select first if current not found or new
+            }
+        }
+
+        function handleImportProject() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    try {
+                        const content = await readFileAsText(file);
+                        const projectData = JSON.parse(content);
+                        // Basic validation
+                        if (projectData.name && projectData.sprites && projectData.maps && projectData.gameCode) {
+                            if (localStorage.getItem(`rgm_project_${projectData.name}`)) {
+                                if (!confirm(`Project "${projectData.name}" already exists locally. Overwrite?`)) {
+                                    // Optionally, prompt for a new name
+                                    const newName = prompt("Enter a new name for the imported project:", projectData.name + "_imported");
+                                    if (!newName) return;
+                                    projectData.name = newName;
+                                    projectData.id = generateId(); // new ID for new name
+                                }
+                            }
+                            loadProject(projectData);
+                            saveCurrentProject(); // Save imported project to localStorage
+                            updateStatus(`Project "${projectData.name}" imported.`);
+                        } else {
+                            alert('Invalid project file format.');
+                        }
+                    } catch (err) {
+                        alert(`Error importing project: ${err.message}`);
+                        logToConsole(`Error importing project: ${err.message}`, 'error');
+                    }
+                }
+            };
+            input.click();
+        }
+
+        function handleExportProject() {
+            if (!currentProject) {
+                alert("No active project to export.");
+                return;
+            }
+            currentProject.gameCode = gameCodeEditor.value; // Ensure latest code is included
+            const projectJson = JSON.stringify(currentProject, null, 2);
+            downloadFile(`${currentProject.name}.rgm.json`, projectJson, 'application/json');
+        }
+        
+        function startAutoSave() {
+            if (autoSaveTimer) clearInterval(autoSaveTimer);
+            autoSaveTimer = setInterval(() => {
+                saveCurrentProject();
+                updateStatus(`Project auto-saved at ${new Date().toLocaleTimeString()}`);
+            }, AUTO_SAVE_INTERVAL);
+            logToConsole("Auto-save enabled.");
+        }
+
+        function stopAutoSave() {
+            if (autoSaveTimer) {
+                clearInterval(autoSaveTimer);
+                autoSaveTimer = null;
+                logToConsole("Auto-save disabled.");
+            }
+        }
+
+
+        // --- Mode Switching ---
+        function switchMode(mode) {
+            currentMode = mode;
+            modeSelector.value = mode;
+
+            // Hide all sections
+            spriteEditorSection.classList.add('hidden');
+            mapEditorSection.classList.add('hidden');
+            codeEditorSection.classList.add('hidden');
+            playModeSection.classList.add('hidden');
+
+            sidebarSprites.classList.add('hidden');
+            sidebarMaps.classList.add('hidden');
+
+            // Show current mode section
+            if (mode === 'sprite') {
+                spriteEditorSection.classList.remove('hidden');
+                sidebarSprites.classList.remove('hidden');
+                if (activeSpriteId) loadSpriteIntoEditor(activeSpriteId);
+                else if (currentProject.sprites.length > 0) loadSpriteIntoEditor(currentProject.sprites[0].id);
+                else initSpriteEditor(); // Init with default if no sprites
+            } else if (mode === 'map') {
+                mapEditorSection.classList.remove('hidden');
+                sidebarSprites.classList.remove('hidden'); // Sprites needed for tile selection
+                sidebarMaps.classList.remove('hidden');
+                if (activeMapId) loadMapIntoEditor(activeMapId);
+                else if (currentProject.maps.length > 0) loadMapIntoEditor(currentProject.maps[0].id);
+                else initMapEditor(); // Init with default if no maps
+                refreshMapSpriteSelector();
+            } else if (mode === 'code') {
+                codeEditorSection.classList.remove('hidden');
+            } else if (mode === 'play') {
+                playModeSection.classList.remove('hidden');
+                initPlayMode();
+            }
+            updateStatus(`Switched to ${mode} mode.`);
+            logToConsole(`Mode changed to: ${mode}`);
+        }
+
+        // --- Sprite Editor ---
+        function initSpriteEditor() {
+            setupSpriteColorPalette();
+            setupSpriteCanvasEvents();
+            spriteSizeSelector.value = currentProject.settings.spriteSize;
+
+            if (!activeSpriteId && currentProject.sprites.length > 0) {
+                activeSpriteId = currentProject.sprites[0].id;
+            }
+            if (activeSpriteId) {
+                loadSpriteIntoEditor(activeSpriteId);
+            } else {
+                // No sprites, setup a blank editor
+                const size = parseInt(spriteSizeSelector.value);
+                spriteCanvas.width = size * spritePixelSize;
+                spriteCanvas.height = size * spritePixelSize;
+                clearSpriteCanvas(true); // Clear with transparency and update previews
+            }
+            updateSpriteToolButtons();
+        }
+
+        function setupSpriteColorPalette() {
+            spriteColorPalette.innerHTML = '';
+            PALETTE.forEach(color => {
+                const btn = document.createElement('button');
+                btn.classList.add('color-palette-button');
+                btn.style.backgroundColor = color;
+                btn.dataset.color = color;
+                if (color === selectedColor) btn.classList.add('selected');
+                btn.onclick = () => {
+                    selectedColor = color;
+                    spriteColorPalette.querySelectorAll('.color-palette-button').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    if (spriteEditorTool === 'picker') { // Switch back to pencil after picking
+                        spriteEditorTool = 'pencil';
+                        updateSpriteToolButtons();
+                    }
+                };
+                spriteColorPalette.appendChild(btn);
+            });
+        }
+        
+        function getSpriteById(id) {
+            return currentProject.sprites.find(s => s.id === id);
+        }
+
+        function loadSpriteIntoEditor(spriteId) {
+            const sprite = getSpriteById(spriteId);
+            if (!sprite) {
+                logToConsole(`Sprite ${spriteId} not found.`, 'error');
+                activeSpriteId = null;
+                clearSpriteCanvas(true);
+                return;
+            }
+            activeSpriteId = spriteId;
+            spriteSizeSelector.value = sprite.size; // Update selector to match sprite's actual size
+            currentProject.settings.spriteSize = sprite.size; // Update project setting for new sprites
+
+            spriteCanvas.width = sprite.size * spritePixelSize;
+            spriteCanvas.height = sprite.size * spritePixelSize;
+            
+            clearUndoRedo();
+            pushToUndoStack(sprite.pixels); // Initial state for undo
+
+            drawSpriteOnEditorCanvas(sprite.pixels);
+            updateSpritePreviews(sprite.pixels, sprite.size);
+            highlightSelectedSpriteInList(spriteId);
+            updateStatus(`Editing sprite: ${sprite.name}`);
+        }
+
+        function drawSpriteOnEditorCanvas(pixels) {
+            const size = parseInt(spriteSizeSelector.value); // Use current selector value for grid drawing
+            spriteCtx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+
+            // Checkerboard background for transparency
+            const TILE_SIZE = spritePixelSize / 2; // Smaller checker tiles
+            for (let y = 0; y < size * 2; y++) {
+                for (let x = 0; x < size * 2; x++) {
+                    spriteCtx.fillStyle = (x + y) % 2 === 0 ? '#E0E0E0' : '#A0A0A0';
+                    spriteCtx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+            
+            if (!pixels) return;
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const color = pixels[y] && pixels[y][x] ? pixels[y][x] : TRANSPARENT_COLOR;
+                    if (color !== TRANSPARENT_COLOR) {
+                        spriteCtx.fillStyle = color;
+                        spriteCtx.fillRect(x * spritePixelSize, y * spritePixelSize, spritePixelSize, spritePixelSize);
+                    }
+                }
+            }
+
+            // Draw grid lines
+            spriteCtx.strokeStyle = var(--grid-line-color);
+            spriteCtx.lineWidth = 0.5;
+            for (let i = 0; i <= size; i++) {
+                spriteCtx.beginPath();
+                spriteCtx.moveTo(i * spritePixelSize, 0);
+                spriteCtx.lineTo(i * spritePixelSize, size * spritePixelSize);
+                spriteCtx.stroke();
+                spriteCtx.beginPath();
+                spriteCtx.moveTo(0, i * spritePixelSize);
+                spriteCtx.lineTo(size * spritePixelSize, i * spritePixelSize);
+                spriteCtx.stroke();
+            }
+        }
+
+        function updateSpritePreviews(pixels, size) {
+            if (!pixels) return;
+            const previews = [
+                { canvas: spritePreview1x, scale: 1 },
+                { canvas: spritePreview2x, scale: 2 },
+                { canvas: spritePreview4x, scale: 4 }
+            ];
+            previews.forEach(p => {
+                p.canvas.width = size * p.scale;
+                p.canvas.height = size * p.scale;
+                const ctx = p.canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false; // Pixelated scaling
+                ctx.clearRect(0, 0, p.canvas.width, p.canvas.height);
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const color = pixels[y] && pixels[y][x] ? pixels[y][x] : TRANSPARENT_COLOR;
+                        if (color !== TRANSPARENT_COLOR) {
+                            ctx.fillStyle = color;
+                            ctx.fillRect(x * p.scale, y * p.scale, p.scale, p.scale);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSpriteCanvasEvents() {
+            let drawing = false;
+            spriteCanvas.onmousedown = (e) => {
+                if (!activeSpriteId) return;
+                drawing = true;
+                handleSpriteDraw(e);
+            };
+            spriteCanvas.onmousemove = (e) => {
+                const rect = spriteCanvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / spritePixelSize);
+                const y = Math.floor((e.clientY - rect.top) / spritePixelSize);
+                cursorCoordsDisplay.textContent = `X: ${x}, Y: ${y}`;
+                if (drawing && activeSpriteId) {
+                    handleSpriteDraw(e);
+                }
+            };
+            spriteCanvas.onmouseup = () => {
+                if (drawing && activeSpriteId) {
+                    const sprite = getSpriteById(activeSpriteId);
+                    if (sprite) pushToUndoStack(sprite.pixels); // Push final state of this draw action
+                }
+                drawing = false;
+            };
+            spriteCanvas.onmouseleave = () => {
+                 cursorCoordsDisplay.textContent = `X: -, Y: -`;
+                // if (drawing && activeSpriteId) { // Option: commit on mouse leave
+                //     const sprite = getSpriteById(activeSpriteId);
+                //     if (sprite) pushToUndoStack(sprite.pixels);
+                // }
+                // drawing = false; // Option: stop drawing if mouse leaves
+            };
+        }
+
+        function handleSpriteDraw(e) {
+            const sprite = getSpriteById(activeSpriteId);
+            if (!sprite) return;
+
+            const rect = spriteCanvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / spritePixelSize);
+            const y = Math.floor((e.clientY - rect.top) / spritePixelSize);
+
+            if (x < 0 || x >= sprite.size || y < 0 || y >= sprite.size) return;
+
+            const currentPixelColor = sprite.pixels[y][x];
+
+            switch (spriteEditorTool) {
+                case 'pencil':
+                    if (currentPixelColor !== selectedColor) {
+                        sprite.pixels[y][x] = selectedColor;
+                    }
+                    break;
+                case 'eraser':
+                    if (currentPixelColor !== TRANSPARENT_COLOR) {
+                        sprite.pixels[y][x] = TRANSPARENT_COLOR;
+                    }
+                    break;
+                case 'fill':
+                    if (currentPixelColor !== selectedColor) { // Avoid filling if color is already the same
+                        floodFillSprite(sprite, x, y, selectedColor);
+                    }
+                    // For fill, mouseup will push to undo stack
+                    break;
+                case 'picker':
+                    selectedColor = sprite.pixels[y][x] === TRANSPARENT_COLOR ? PALETTE[0] : sprite.pixels[y][x]; // Default to black if transparent
+                    spriteColorPalette.querySelectorAll('.color-palette-button').forEach(b => {
+                        b.classList.toggle('selected', b.dataset.color === selectedColor);
+                    });
+                    spriteEditorTool = 'pencil'; // Switch back to pencil
+                    updateSpriteToolButtons();
+                    return; // Don't redraw for picker
+            }
+            // For pencil and eraser, redraw immediately. For fill, it's handled inside floodFillSprite or on mouseup.
+            // If not fill, redraw and update previews. Fill tool might be slow, so it updates once.
+            if (spriteEditorTool !== 'fill') {
+                 drawSpriteOnEditorCanvas(sprite.pixels);
+                 updateSpritePreviews(sprite.pixels, sprite.size);
+            } else { // For fill, ensure it redraws and updates previews once done
+                drawSpriteOnEditorCanvas(sprite.pixels);
+                updateSpritePreviews(sprite.pixels, sprite.size);
+            }
+        }
+
+        function floodFillSprite(sprite, startX, startY, fillColor) {
+            const targetColor = sprite.pixels[startY][startX];
+            if (fillColor === targetColor) return; // No need to fill
+
+            const size = sprite.size;
+            const queue = [[startX, startY]];
+            const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+
+            while (queue.length > 0) {
+                const [x, y] = queue.shift();
+
+                if (x < 0 || x >= size || y < 0 || y >= size || visited[y][x] || sprite.pixels[y][x] !== targetColor) {
+                    continue;
+                }
+
+                sprite.pixels[y][x] = fillColor;
+                visited[y][x] = true;
+
+                queue.push([x + 1, y]);
+                queue.push([x - 1, y]);
+                queue.push([x, y + 1]);
+                queue.push([x, y - 1]);
+            }
+            // Redraw and update previews are handled by caller or mouseup event after fill
+        }
+
+        function pushToUndoStack(pixelData) {
+            if (!activeSpriteId) return;
+            // Deep copy pixel data
+            const pixelsCopy = pixelData.map(row => [...row]);
+            spriteUndoStack.push(pixelsCopy);
+            if (spriteUndoStack.length > MAX_UNDO_HISTORY) {
+                spriteUndoStack.shift(); // Remove oldest history
+            }
+            spriteRedoStack = []; // Clear redo stack on new action
+            updateUndoRedoButtons();
+        }
+
+        function spriteUndo() {
+            if (spriteUndoStack.length <= 1) return; // Keep the initial state
+            const sprite = getSpriteById(activeSpriteId);
+            if (!sprite) return;
+
+            const currentState = spriteUndoStack.pop();
+            spriteRedoStack.push(currentState);
+            
+            const prevState = spriteUndoStack[spriteUndoStack.length - 1];
+            sprite.pixels = prevState.map(row => [...row]); // Apply previous state
+
+            drawSpriteOnEditorCanvas(sprite.pixels);
+            updateSpritePreviews(sprite.pixels, sprite.size);
+            updateUndoRedoButtons();
+        }
+
+        function spriteRedo() {
+            if (spriteRedoStack.length === 0) return;
+            const sprite = getSpriteById(activeSpriteId);
+            if (!sprite) return;
+
+            const nextState = spriteRedoStack.pop();
+            spriteUndoStack.push(nextState);
+            sprite.pixels = nextState.map(row => [...row]); // Apply redone state
+
+            drawSpriteOnEditorCanvas(sprite.pixels);
+            updateSpritePreviews(sprite.pixels, sprite.size);
+            updateUndoRedoButtons();
+        }
+        
+        function clearUndoRedo() {
+            spriteUndoStack = [];
+            spriteRedoStack = [];
+            updateUndoRedoButtons();
+        }
+
+        function updateUndoRedoButtons() {
+            spriteUndoBtn.disabled = spriteUndoStack.length <= 1; // Can't undo initial state
+            spriteRedoBtn.disabled = spriteRedoStack.length === 0;
+        }
+
+        function updateSpriteToolButtons() {
+            ['pencil', 'eraser', 'fill', 'picker'].forEach(tool => {
+                document.getElementById(`sprite-${tool}-tool`).classList.remove('selected');
+            });
+            document.getElementById(`sprite-${spriteEditorTool}-tool`).classList.add('selected');
+        }
+
+        function handleSpriteSizeChange() {
+            const newSize = parseInt(spriteSizeSelector.value);
+            const sprite = getSpriteById(activeSpriteId);
+            if (sprite && sprite.size !== newSize) {
+                if (confirm("Changing sprite size will clear current pixel data and undo history. Continue?")) {
+                    sprite.size = newSize;
+                    sprite.pixels = Array(newSize).fill(null).map(() => Array(newSize).fill(TRANSPARENT_COLOR));
+                    currentProject.settings.spriteSize = newSize; // Update project default
+                    mapTileSizeInput.value = newSize; // And map tile size
+                    currentProject.settings.defaultTileSize = newSize;
+                    loadSpriteIntoEditor(activeSpriteId); // Reload to re-render canvas and clear history
+                } else {
+                    spriteSizeSelector.value = sprite.size; // Revert selector
+                }
+            } else if (!sprite) { // If no active sprite, just update project default
+                 currentProject.settings.spriteSize = newSize;
+                 mapTileSizeInput.value = newSize;
+                 currentProject.settings.defaultTileSize = newSize;
+                 initSpriteEditor(); // Re-initialize with new size
+            }
+        }
+
+        function clearSpriteCanvas(updatePreviewsAndHistory = false) {
+            const sprite = getSpriteById(activeSpriteId);
+            if (sprite) {
+                const size = sprite.size;
+                sprite.pixels = Array(size).fill(null).map(() => Array(size).fill(TRANSPARENT_COLOR));
+                if (updatePreviewsAndHistory) {
+                    pushToUndoStack(sprite.pixels);
+                    drawSpriteOnEditorCanvas(sprite.pixels);
+                    updateSpritePreviews(sprite.pixels, size);
+                } else {
+                    drawSpriteOnEditorCanvas(sprite.pixels);
+                }
+            } else { // No active sprite, clear the canvas based on selector
+                const size = parseInt(spriteSizeSelector.value);
+                const blankPixels = Array(size).fill(null).map(() => Array(size).fill(TRANSPARENT_COLOR));
+                drawSpriteOnEditorCanvas(blankPixels); // Draw blank on editor
+                if (updatePreviewsAndHistory) updateSpritePreviews(blankPixels, size); // Update previews
+            }
+        }
+        
+        function handleSpriteImportJSON() {
+            spriteJsonFileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file && activeSpriteId) {
+                    try {
+                        const content = await readFileAsText(file);
+                        const importedSpriteData = JSON.parse(content);
+                        // Basic validation
+                        if (importedSpriteData.name && importedSpriteData.size && importedSpriteData.pixels) {
+                            const sprite = getSpriteById(activeSpriteId);
+                            sprite.name = importedSpriteData.name; // Keep ID, update data
+                            sprite.size = importedSpriteData.size;
+                            sprite.pixels = importedSpriteData.pixels;
+                            // Potentially update metadata if it exists
+                            loadSpriteIntoEditor(activeSpriteId); // Reload to reflect changes
+                            refreshSpriteList(); // Update name in list
+                            updateStatus(`Sprite "${sprite.name}" imported from JSON.`);
+                        } else {
+                            alert('Invalid sprite JSON file format.');
+                        }
+                    } catch (err) {
+                        alert(`Error importing sprite JSON: ${err.message}`);
+                    }
+                } else if (!activeSpriteId) {
+                    alert("Please select or create a sprite first.");
+                }
+                spriteJsonFileInput.value = ''; // Reset file input
+            };
+            spriteJsonFileInput.click();
+        }
+
+        function handleSpriteExportJSON() {
+            const sprite = getSpriteById(activeSpriteId);
+            if (sprite) {
+                const spriteJson = JSON.stringify({
+                    name: sprite.name,
+                    id: sprite.id, // Good to include ID for reference, though not always used on import
+                    size: sprite.size,
+                    pixels: sprite.pixels,
+                    // metadata: sprite.metadata || {}
+                }, null, 2);
+                downloadFile(`${sprite.name}.sprite.json`, spriteJson, 'application/json');
+            } else {
+                alert("No active sprite to export.");
+            }
+        }
+
+        function handleSpriteImportPNG() {
+            spritePngFileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file && activeSpriteId) {
+                    try {
+                        const dataURL = await readFileAsDataURL(file);
+                        const img = new Image();
+                        img.onload = () => {
+                            const sprite = getSpriteById(activeSpriteId);
+                            const size = sprite.size; // Use current sprite's size
+                            
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = size;
+                            tempCanvas.height = size;
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCtx.drawImage(img, 0, 0, size, size);
+                            const imageData = tempCtx.getImageData(0, 0, size, size).data;
+                            
+                            const newPixels = Array(size).fill(null).map(() => Array(size).fill(TRANSPARENT_COLOR));
+                            for (let y = 0; y < size; y++) {
+                                for (let x = 0; x < size; x++) {
+                                    const i = (y * size + x) * 4;
+                                    const r = imageData[i];
+                                    const g = imageData[i+1];
+                                    const b = imageData[i+2];
+                                    const a = imageData[i+3];
+                                    if (a > 128) { // Consider alpha threshold
+                                        newPixels[y][x] = findClosestPaletteColor(r, g, b);
+                                    } else {
+                                        newPixels[y][x] = TRANSPARENT_COLOR;
+                                    }
+                                }
+                            }
+                            sprite.pixels = newPixels;
+                            loadSpriteIntoEditor(activeSpriteId); // Reload to reflect changes
+                            updateStatus(`Sprite "${sprite.name}" imported from PNG.`);
+                        };
+                        img.src = dataURL;
+                    } catch (err) {
+                        alert(`Error importing sprite PNG: ${err.message}`);
+                    }
+                } else if (!activeSpriteId) {
+                    alert("Please select or create a sprite first.");
+                }
+                spritePngFileInput.value = ''; // Reset file input
+            };
+            spritePngFileInput.click();
+        }
+
+        function findClosestPaletteColor(r, g, b) {
+            let closestColor = PALETTE[0];
+            let minDistance = Infinity;
+
+            PALETTE.forEach(hexColor => {
+                const cR = parseInt(hexColor.slice(1, 3), 16);
+                const cG = parseInt(hexColor.slice(3, 5), 16);
+                const cB = parseInt(hexColor.slice(5, 7), 16);
+                const distance = Math.sqrt(Math.pow(r - cR, 2) + Math.pow(g - cG, 2) + Math.pow(b - cB, 2));
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestColor = hexColor;
+                }
+            });
+            return closestColor;
+        }
+
+        function handleSpriteExportPNG() {
+            const sprite = getSpriteById(activeSpriteId);
+            if (sprite) {
+                const size = sprite.size;
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = size;
+                tempCanvas.height = size;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Draw sprite on temp canvas
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const color = sprite.pixels[y][x];
+                        if (color !== TRANSPARENT_COLOR) {
+                            tempCtx.fillStyle = color;
+                            tempCtx.fillRect(x, y, 1, 1);
+                        }
+                    }
+                }
+                const dataURL = tempCanvas.toDataURL('image/png');
+                downloadFile(`${sprite.name}.png`, dataURL.split(',')[1], 'image/png', true); // Need a way to download base64
+                
+                // For direct download:
+                const link = document.createElement('a');
+                link.download = `${sprite.name}.png`;
+                link.href = dataURL;
+                link.click();
+
+            } else {
+                alert("No active sprite to export.");
+            }
+        }
+
+
+        // --- Sidebar Sprite List ---
+        function refreshSpriteList() {
+            spriteListUI.innerHTML = '';
+            currentProject.sprites.forEach(sprite => {
+                const li = document.createElement('li');
+                li.textContent = sprite.name;
+                li.dataset.spriteId = sprite.id;
+                if (sprite.id === activeSpriteId) {
+                    li.classList.add('selected');
+                }
+                li.onclick = () => {
+                    activeSpriteId = sprite.id;
+                    if (currentMode === 'sprite') loadSpriteIntoEditor(sprite.id);
+                    highlightSelectedSpriteInList(sprite.id);
+                    if (currentMode === 'map') { // If in map mode, update tile selector
+                        selectedTileSpriteId = sprite.id;
+                        refreshMapSpriteSelector(); // To highlight the new selection
+                    }
+                };
+                spriteListUI.appendChild(li);
+            });
+        }
+
+        function highlightSelectedSpriteInList(spriteId) {
+            spriteListUI.querySelectorAll('li').forEach(li => {
+                li.classList.toggle('selected', li.dataset.spriteId === spriteId);
+            });
+        }
+
+        function handleAddSprite() {
+            const name = newSpriteNameInput.value.trim() || `Sprite ${currentProject.sprites.length + 1}`;
+            const size = parseInt(spriteSizeSelector.value) || currentProject.settings.spriteSize;
+            const newSprite = {
+                id: generateId(),
+                name: name,
+                size: size,
+                pixels: Array(size).fill(null).map(() => Array(size).fill(TRANSPARENT_COLOR)),
+                // metadata: {}
+            };
+            currentProject.sprites.push(newSprite);
+            activeSpriteId = newSprite.id;
+            refreshSpriteList();
+            if (currentMode === 'sprite') loadSpriteIntoEditor(newSprite.id);
+            if (currentMode === 'map') refreshMapSpriteSelector(); // Update map editor's sprite list
+            newSpriteNameInput.value = '';
+            updateStatus(`Sprite "${name}" added.`);
+        }
+
+        function handleDeleteSprite() {
+            if (!activeSpriteId) {
+                alert("No sprite selected to delete.");
+                return;
+            }
+            if (confirm(`Are you sure you want to delete sprite "${getSpriteById(activeSpriteId).name}"?`)) {
+                currentProject.sprites = currentProject.sprites.filter(s => s.id !== activeSpriteId);
+                
+                // Remove this sprite from all maps
+                currentProject.maps.forEach(map => {
+                    map.layers.forEach(layer => {
+                        if (layer.type === 'tile') {
+                            for(let r=0; r < layer.data.length; r++) {
+                                for (let c=0; c < layer.data[r].length; c++) {
+                                    if (layer.data[r][c] === activeSpriteId) {
+                                        layer.data[r][c] = -1; // Set to empty
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+
+                const oldActiveId = activeSpriteId;
+                activeSpriteId = currentProject.sprites.length > 0 ? currentProject.sprites[0].id : null;
+                refreshSpriteList();
+                if (currentMode === 'sprite') {
+                    if (activeSpriteId) loadSpriteIntoEditor(activeSpriteId);
+                    else initSpriteEditor(); // Clear editor if no sprites left
+                }
+                if (currentMode === 'map') {
+                    refreshMapSpriteSelector();
+                    if (selectedTileSpriteId === oldActiveId) selectedTileSpriteId = null;
+                    loadMapIntoEditor(activeMapId); // Redraw map if deleted sprite was used
+                }
+                updateStatus(`Sprite deleted.`);
+            }
+        }
+
+        // --- Map Editor ---
+        function initMapEditor() {
+            setupMapCanvasEvents();
+            mapWidthInput.value = activeMapId ? getMapById(activeMapId).width : currentProject.settings.defaultMapWidth;
+            mapHeightInput.value = activeMapId ? getMapById(activeMapId).height : currentProject.settings.defaultMapHeight;
+            mapTileSizeInput.value = currentProject.settings.defaultTileSize;
+
+            if (!activeMapId && currentProject.maps.length > 0) {
+                activeMapId = currentProject.maps[0].id;
+            }
+            if (activeMapId) {
+                loadMapIntoEditor(activeMapId);
+            } else {
+                // No maps, setup a blank editor state
+                mapCanvas.width = (currentProject.settings.defaultMapWidth * currentProject.settings.defaultTileSize) * mapEditorZoom;
+                mapCanvas.height = (currentProject.settings.defaultMapHeight * currentProject.settings.defaultTileSize) * mapEditorZoom;
+                drawMapOnEditorCanvas(); // Draw empty or placeholder
+            }
+            updateMapToolButtons();
+            refreshMapSpriteSelector();
+            refreshMapLayerSelector();
+        }
+
+        function getMapById(id) {
+            return currentProject.maps.find(m => m.id === id);
+        }
+
+        function loadMapIntoEditor(mapId) {
+            const map = getMapById(mapId);
+            if (!map) {
+                logToConsole(`Map ${mapId} not found.`, 'error');
+                activeMapId = null;
+                // Potentially clear map canvas
+                return;
+            }
+            activeMapId = mapId;
+            activeMapLayerIndex = Math.min(activeMapLayerIndex, map.layers.length - 1);
+            if (activeMapLayerIndex < 0 && map.layers.length > 0) activeMapLayerIndex = 0;
+
+
+            mapWidthInput.value = map.width;
+            mapHeightInput.value = map.height;
+            mapTileSizeInput.value = map.tileSize; // Usually matches sprite size
+
+            mapCanvas.width = map.width * map.tileSize * mapEditorZoom;
+            mapCanvas.height = map.height * map.tileSize * mapEditorZoom;
+
+            drawMapOnEditorCanvas();
+            highlightSelectedMapInList(mapId);
+            refreshMapLayerSelector();
+            updateStatus(`Editing map: ${map.name}`);
+        }
+
+        function drawMapOnEditorCanvas() {
+            const map = getMapById(activeMapId);
+            if (!map) {
+                mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                mapCtx.fillStyle = '#555';
+                mapCtx.font = '16px var(--font-retro)';
+                mapCtx.textAlign = 'center';
+                mapCtx.fillText("No map selected or map data missing.", mapCanvas.width / 2, mapCanvas.height / 2);
+                return;
+            }
+
+            const TILE_SIZE = map.tileSize * mapEditorZoom;
+            mapCanvas.width = map.width * TILE_SIZE; // Recalc based on current zoom
+            mapCanvas.height = map.height * TILE_SIZE;
+
+            mapCtx.imageSmoothingEnabled = false; // Pixelated
+            mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            // Draw checkerboard background for map
+            const CHECKER_SIZE = TILE_SIZE / 2;
+            for (let r = 0; r < map.height * 2; ++r) {
+                for (let c = 0; c < map.width * 2; ++c) {
+                    mapCtx.fillStyle = (r + c) % 2 === 0 ? "#4a4a4a" : "#505050";
+                    mapCtx.fillRect(c * CHECKER_SIZE, r * CHECKER_SIZE, CHECKER_SIZE, CHECKER_SIZE);
+                }
+            }
+
+
+            map.layers.forEach((layer, layerIndex) => {
+                if (!layer.visible && layerIndex !== activeMapLayerIndex && !(showCollisionOverlay && layer.type === 'collision')) return; // Don't draw hidden layers unless active or collision overlay
+
+                const alpha = (layerIndex === activeMapLayerIndex) ? 1.0 : 0.5; // Dim non-active layers
+                mapCtx.globalAlpha = alpha;
+
+                if (layer.type === 'tile') {
+                    for (let r = 0; r < map.height; r++) {
+                        for (let c = 0; c < map.width; c++) {
+                            const tileSpriteId = layer.data[r] ? layer.data[r][c] : -1;
+                            if (tileSpriteId !== -1 && tileSpriteId !== undefined) {
+                                const sprite = getSpriteById(tileSpriteId);
+                                if (sprite) {
+                                    const spriteImg = getSpriteImage(sprite); // Get pre-rendered sprite image
+                                    if (spriteImg) {
+                                        mapCtx.drawImage(spriteImg, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (layer.type === 'collision' && (layerIndex === activeMapLayerIndex || showCollisionOverlay)) {
+                    mapCtx.globalAlpha = (layerIndex === activeMapLayerIndex) ? 0.7 : (showCollisionOverlay ? 0.5 : 0); // Collision overlay alpha
+                    for (let r = 0; r < map.height; r++) {
+                        for (let c = 0; c < map.width; c++) {
+                            if (layer.data[r] && layer.data[r][c] === 1) { // 1 for solid
+                                mapCtx.fillStyle = 'rgba(255, 0, 0, 0.5)'; // Semi-transparent red for collision
+                                mapCtx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                            }
+                        }
+                    }
+                }
+            });
+            mapCtx.globalAlpha = 1.0; // Reset alpha
+
+            // Draw grid lines for the active layer
+            mapCtx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+            mapCtx.lineWidth = 1;
+            for (let i = 0; i <= map.width; i++) {
+                mapCtx.beginPath();
+                mapCtx.moveTo(i * TILE_SIZE, 0);
+                mapCtx.lineTo(i * TILE_SIZE, map.height * TILE_SIZE);
+                mapCtx.stroke();
+            }
+            for (let i = 0; i <= map.height; i++) {
+                mapCtx.beginPath();
+                mapCtx.moveTo(0, i * TILE_SIZE);
+                mapCtx.lineTo(map.width * TILE_SIZE, i * TILE_SIZE);
+                mapCtx.stroke();
+            }
+        }
+        
+        // Cache for sprite images to avoid re-rendering them constantly
+        const spriteImageCache = new Map();
+
+        function getSpriteImage(sprite) {
+            if (spriteImageCache.has(sprite.id)) {
+                // TODO: Add a check if sprite data has changed to invalidate cache
+                // For now, assume it's up-to-date or cleared when sprite changes
+                return spriteImageCache.get(sprite.id);
+            }
+
+            const canvas = document.createElement('canvas');
+            const size = sprite.size;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const color = sprite.pixels[y][x];
+                    if (color !== TRANSPARENT_COLOR) {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+            // Store in cache
+            spriteImageCache.set(sprite.id, canvas);
+            return canvas;
+        }
+        
+        // Call this when a sprite is updated to clear its cache
+        function invalidateSpriteCache(spriteId) {
+            spriteImageCache.delete(spriteId);
+        }
+
+
+        function setupMapCanvasEvents() {
+            let drawing = false;
+            mapCanvas.onmousedown = (e) => {
+                if (!activeMapId) return;
+                drawing = true;
+                handleMapDraw(e);
+            };
+            mapCanvas.onmousemove = (e) => {
+                const map = getMapById(activeMapId);
+                if (!map) return;
+                const TILE_SIZE = map.tileSize * mapEditorZoom;
+                const rect = mapCanvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / TILE_SIZE);
+                const y = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+                cursorCoordsDisplay.textContent = `TileX: ${x}, TileY: ${y}`;
+
+                if (drawing && activeMapId) {
+                    handleMapDraw(e);
+                }
+            };
+            mapCanvas.onmouseup = () => {
+                drawing = false;
+            };
+            mapCanvas.onmouseleave = () => {
+                cursorCoordsDisplay.textContent = `X: -, Y: -`;
+                // drawing = false; // Optional: stop drawing if mouse leaves
+            };
+        }
+
+        function handleMapDraw(e) {
+            const map = getMapById(activeMapId);
+            if (!map || map.layers.length === 0) return;
+
+            const TILE_SIZE = map.tileSize * mapEditorZoom;
+            const rect = mapCanvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / TILE_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+
+            if (x < 0 || x >= map.width || y < 0 || y >= map.height) return;
+
+            const layer = map.layers[activeMapLayerIndex];
+            if (!layer) return;
+
+            if (layer.type === 'tile') {
+                switch (mapEditorTool) {
+                    case 'place':
+                        if (selectedTileSpriteId !== null && layer.data[y][x] !== selectedTileSpriteId) {
+                            layer.data[y][x] = selectedTileSpriteId;
+                        }
+                        break;
+                    case 'erase':
+                        if (layer.data[y][x] !== -1) {
+                            layer.data[y][x] = -1; // -1 for empty tile
+                        }
+                        break;
+                    case 'fill':
+                         // Check if already this tile to prevent recursion on same tile fill
+                        if (selectedTileSpriteId !== null && layer.data[y][x] !== selectedTileSpriteId) {
+                            floodFillMap(map, layer, x, y, selectedTileSpriteId);
+                        }
+                        break;
+                }
+            } else if (layer.type === 'collision') {
+                 switch (mapEditorTool) {
+                    case 'place': // Mark as solid
+                        if (layer.data[y][x] !== 1) layer.data[y][x] = 1;
+                        break;
+                    case 'erase': // Mark as passable
+                        if (layer.data[y][x] !== 0) layer.data[y][x] = 0;
+                        break;
+                    case 'fill': // Fill with solid (1) or passable (0) - let's say solid for now
+                        if (layer.data[y][x] !== 1) { // If not already solid
+                             floodFillMap(map, layer, x, y, 1); // Fill with '1' (solid)
+                        }
+                        break;
+                 }
+            }
+            drawMapOnEditorCanvas();
+        }
+        
+        function floodFillMap(map, layer, startX, startY, fillValue) {
+            const targetValue = layer.data[startY][startX];
+            if (fillValue === targetValue) return;
+
+            const queue = [[startX, startY]];
+            // No visited array needed if we directly modify and check layer.data
+
+            while (queue.length > 0) {
+                const [x, y] = queue.shift();
+
+                if (x < 0 || x >= map.width || y < 0 || y >= map.height || layer.data[y][x] !== targetValue) {
+                    continue;
+                }
+                layer.data[y][x] = fillValue;
+
+                queue.push([x + 1, y]);
+                queue.push([x - 1, y]);
+                queue.push([x, y + 1]);
+                queue.push([x, y - 1]);
+            }
+        }
+
+        function updateMapToolButtons() {
+            ['place', 'erase', 'fill'].forEach(tool => {
+                document.getElementById(`map-${tool}-tool`).classList.remove('selected');
+            });
+            document.getElementById(`map-${mapEditorTool}-tool`).classList.add('selected');
+        }
+        
+        function handleMapZoomChange() {
+            mapEditorZoom = parseFloat(mapZoomSelector.value);
+            if (activeMapId) {
+                loadMapIntoEditor(activeMapId); // Reload to re-render with new zoom
+            }
+        }
+
+        function refreshMapSpriteSelector() {
+            mapSpriteSelectorUI.innerHTML = '';
+            if (currentProject.sprites.length === 0) {
+                mapSpriteSelectorUI.textContent = "No sprites available. Create some in the Sprite Editor.";
+                return;
+            }
+            currentProject.sprites.forEach(sprite => {
+                const img = getSpriteImage(sprite).cloneNode(); // Use cached image, clone for DOM
+                img.title = sprite.name;
+                img.dataset.spriteId = sprite.id;
+                if (sprite.id === selectedTileSpriteId) {
+                    img.classList.add('selected');
+                }
+                img.onclick = () => {
+                    selectedTileSpriteId = sprite.id;
+                    mapSpriteSelectorUI.querySelectorAll('img').forEach(i => i.classList.remove('selected'));
+                    img.classList.add('selected');
+                };
+                mapSpriteSelectorUI.appendChild(img);
+            });
+        }
+        
+        function refreshMapLayerSelector() {
+            mapLayerSelector.innerHTML = '';
+            const map = getMapById(activeMapId);
+            if (!map || map.layers.length === 0) {
+                mapLayerSelector.disabled = true;
+                mapLayerVisibleToggle.disabled = true;
+                mapLayerTypeSelector.disabled = true;
+                removeMapLayerBtn.disabled = true;
+                // Add a default layer if map has none and is active
+                if (map && map.layers.length === 0) {
+                    handleAddMapLayer(false); // Add a default layer without prompting if none exist
+                }
+                return;
+            }
+
+            mapLayerSelector.disabled = false;
+            mapLayerVisibleToggle.disabled = false;
+            mapLayerTypeSelector.disabled = false;
+            removeMapLayerBtn.disabled = false;
+
+            map.layers.forEach((layer, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = layer.name;
+                if (index === activeMapLayerIndex) {
+                    option.selected = true;
+                }
+                mapLayerSelector.appendChild(option);
+            });
+            
+            // Update controls based on selected layer
+            const currentLayer = map.layers[activeMapLayerIndex];
+            if (currentLayer) {
+                mapLayerVisibleToggle.checked = currentLayer.visible;
+                mapLayerTypeSelector.value = currentLayer.type;
+            }
+        }
+
+        function handleAddMapLayer(promptForName = true) {
+            const map = getMapById(activeMapId);
+            if (!map) {
+                alert("Select a map first.");
+                return;
+            }
+
+            const defaultName = `Layer ${map.layers.length + 1}`;
+            const addLayerLogic = (name) => {
+                const newLayer = {
+                    name: name,
+                    data: Array(map.height).fill(null).map(() => Array(map.width).fill(-1)), // -1 for empty tile, 0 for passable in collision
+                    visible: true,
+                    type: 'tile' // Default to tile layer
+                };
+                map.layers.push(newLayer);
+                activeMapLayerIndex = map.layers.length - 1;
+                refreshMapLayerSelector();
+                drawMapOnEditorCanvas();
+                updateStatus(`Layer "${name}" added.`);
+            };
+
+            if (promptForName) {
+                showPrompt("New Layer", "Enter layer name:", defaultName).then(name => {
+                    if (name) addLayerLogic(name);
+                });
+            } else {
+                addLayerLogic(defaultName);
+            }
+        }
+
+        function handleRemoveMapLayer() {
+            const map = getMapById(activeMapId);
+            if (!map || map.layers.length === 0) return;
+            if (map.layers.length === 1) {
+                alert("Cannot delete the last layer.");
+                return;
+            }
+            if (confirm(`Are you sure you want to delete layer "${map.layers[activeMapLayerIndex].name}"?`)) {
+                map.layers.splice(activeMapLayerIndex, 1);
+                activeMapLayerIndex = Math.max(0, activeMapLayerIndex - 1);
+                refreshMapLayerSelector();
+                drawMapOnEditorCanvas();
+                updateStatus("Layer deleted.");
+            }
+        }
+        
+        function handleMapLayerChange() {
+            const map = getMapById(activeMapId);
+            if (!map || map.layers.length === 0) return;
+            activeMapLayerIndex = parseInt(mapLayerSelector.value);
+            const currentLayer = map.layers[activeMapLayerIndex];
+            mapLayerVisibleToggle.checked = currentLayer.visible;
+            mapLayerTypeSelector.value = currentLayer.type;
+            drawMapOnEditorCanvas(); // Redraw to highlight active layer
+        }
+
+        function handleMapLayerPropertyChange() {
+            const map = getMapById(activeMapId);
+            if (!map || !map.layers[activeMapLayerIndex]) return;
+            const layer = map.layers[activeMapLayerIndex];
+            layer.visible = mapLayerVisibleToggle.checked;
+            
+            const newType = mapLayerTypeSelector.value;
+            if (layer.type !== newType) {
+                layer.type = newType;
+                // If changing to collision, initialize with 0s (passable)
+                // If changing from collision, existing 0/1 might be interpreted as sprite IDs - careful.
+                // For simplicity, let's re-init data if type changes significantly
+                if (newType === 'collision') {
+                    layer.data = Array(map.height).fill(null).map(() => Array(map.width).fill(0)); // 0 for passable
+                } else { // 'tile'
+                    layer.data = Array(map.height).fill(null).map(() => Array(map.width).fill(-1)); // -1 for empty
+                }
+            }
+            drawMapOnEditorCanvas();
+        }
+
+        function handleMapResize() {
+            const map = getMapById(activeMapId);
+            if (!map) return;
+
+            const newWidth = parseInt(mapWidthInput.value);
+            const newHeight = parseInt(mapHeightInput.value);
+            // Tile size is read-only, linked to sprite size
+
+            if (newWidth <= 0 || newHeight <= 0) {
+                alert("Map dimensions must be positive.");
+                return;
+            }
+
+            map.layers.forEach(layer => {
+                const newData = Array(newHeight).fill(null).map(() => Array(newWidth).fill(layer.type === 'collision' ? 0 : -1));
+                for (let r = 0; r < Math.min(map.height, newHeight); r++) {
+                    for (let c = 0; c < Math.min(map.width, newWidth); c++) {
+                        newData[r][c] = layer.data[r][c];
+                    }
+                }
+                layer.data = newData;
+            });
+
+            map.width = newWidth;
+            map.height = newHeight;
+            loadMapIntoEditor(activeMapId); // Reload to re-render
+            updateStatus(`Map resized to ${newWidth}x${newHeight}.`);
+        }
+
+
+        // --- Sidebar Map List ---
+        function refreshMapList() {
+            mapListUI.innerHTML = '';
+            currentProject.maps.forEach(map => {
+                const li = document.createElement('li');
+                li.textContent = map.name;
+                li.dataset.mapId = map.id;
+                if (map.id === activeMapId) {
+                    li.classList.add('selected');
+                }
+                li.onclick = () => {
+                    activeMapId = map.id;
+                    if (currentMode === 'map') loadMapIntoEditor(map.id);
+                    highlightSelectedMapInList(map.id);
+                };
+                mapListUI.appendChild(li);
+            });
+        }
+
+        function highlightSelectedMapInList(mapId) {
+            mapListUI.querySelectorAll('li').forEach(li => {
+                li.classList.toggle('selected', li.dataset.mapId === mapId);
+            });
+        }
+
+        function handleAddMap() {
+            const name = newMapNameInput.value.trim() || `Map ${currentProject.maps.length + 1}`;
+            const width = parseInt(mapWidthInput.value) || currentProject.settings.defaultMapWidth;
+            const height = parseInt(mapHeightInput.value) || currentProject.settings.defaultMapHeight;
+            const tileSize = currentProject.settings.defaultTileSize;
+
+            const newMap = {
+                id: generateId(),
+                name: name,
+                width: width,
+                height: height,
+                tileSize: tileSize,
+                layers: [ // Start with one default tile layer
+                    {
+                        name: 'Background',
+                        data: Array(height).fill(null).map(() => Array(width).fill(-1)),
+                        visible: true,
+                        type: 'tile'
+                    }
+                ]
+            };
+            currentProject.maps.push(newMap);
+            activeMapId = newMap.id;
+            activeMapLayerIndex = 0;
+            refreshMapList();
+            if (currentMode === 'map') loadMapIntoEditor(newMap.id);
+            newMapNameInput.value = '';
+            updateStatus(`Map "${name}" added.`);
+        }
+
+        function handleDeleteMap() {
+            if (!activeMapId) {
+                alert("No map selected to delete.");
+                return;
+            }
+            if (confirm(`Are you sure you want to delete map "${getMapById(activeMapId).name}"?`)) {
+                currentProject.maps = currentProject.maps.filter(m => m.id !== activeMapId);
+                activeMapId = currentProject.maps.length > 0 ? currentProject.maps[0].id : null;
+                activeMapLayerIndex = 0;
+                refreshMapList();
+                if (currentMode === 'map') {
+                    if (activeMapId) loadMapIntoEditor(activeMapId);
+                    else initMapEditor(); // Clear editor if no maps left
+                }
+                updateStatus(`Map deleted.`);
+            }
+        }
+
+        // --- Code Editor ---
+        function initCodeEditor() {
+            gameCodeEditor.value = currentProject.gameCode;
+            // No specific drawing or complex setup, just display text
+        }
+
+        // --- Play Mode & Game API ---
+        function initPlayMode() {
+            gameCanvas = document.getElementById('game-canvas');
+            gameCtx = gameCanvas.getContext('2d');
+            gameCanvas.width = currentProject.settings.gameCanvasWidth;
+            gameCanvas.height = currentProject.settings.gameCanvasHeight;
+            
+            // Apply CRT filter if toggled
+            gameCanvasContainer.classList.toggle('crt-effect', crtFilterToggle.checked);
+
+            if (gameRunning) stopGame(); // Stop any existing game
+        }
+        
+        const GameAPI = {
+            // Internal state for API
+            _ctx: null,
+            _sprites: {}, // Processed sprite data (e.g., Image objects or pixel arrays)
+            _maps: {},    // Processed map data
+            _input: gameInputState, // Direct reference to gameInputState
+            _gameInstance: {}, // 'this' context for user game functions
+
+            // Setup method called by game runner
+            _setup: function(ctx, project) {
+                this._ctx = ctx;
+                this._sprites = {};
+                project.sprites.forEach(s => {
+                    // Pre-render sprites to canvases for faster drawing
+                    const canvas = document.createElement('canvas');
+                    canvas.width = s.size;
+                    canvas.height = s.size;
+                    const spriteCtx = canvas.getContext('2d');
+                    spriteCtx.imageSmoothingEnabled = false;
+                    for (let y = 0; y < s.size; y++) {
+                        for (let x = 0; x < s.size; x++) {
+                            const color = s.pixels[y][x];
+                            if (color !== TRANSPARENT_COLOR) {
+                                spriteCtx.fillStyle = color;
+                                spriteCtx.fillRect(x, y, 1, 1);
+                            }
+                        }
+                    }
+                    this._sprites[s.id] = { image: canvas, name: s.name, size: s.size };
+                });
+                this._maps = {};
+                project.maps.forEach(m => this._maps[m.id] = JSON.parse(JSON.stringify(m))); // Deep copy maps
+                this._gameInstance = {}; // Fresh 'this' for each game run
+            },
+            
+            // Core
+            print: (message) => logToConsole(`GAME: ${message}`), // For user to print to editor console
+
+            // Drawing
+            cls: function(color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.fillStyle = color || PALETTE[0];
+                this._ctx.fillRect(0, 0, this._ctx.canvas.width, this._ctx.canvas.height);
+            },
+            sprite: function(id, x, y) {
+                const spriteData = this._sprites[id];
+                if (spriteData) {
+                    this._ctx.drawImage(spriteData.image, Math.floor(x), Math.floor(y));
+                } else {
+                    // console.warn(`GameAPI.sprite: Sprite with ID "${id}" not found.`);
+                }
+            },
+            tilemap: function(mapId, x, y, layerName) {
+                const mapData = this._maps[mapId];
+                if (!mapData) { /* console.warn(`GameAPI.tilemap: Map ID "${mapId}" not found.`); */ return; }
+                
+                const layer = mapData.layers.find(l => l.name === layerName && l.type === 'tile');
+                if (!layer) { /* console.warn(`GameAPI.tilemap: Layer "${layerName}" not found or not a tile layer in map "${mapId}".`); */ return; }
+
+                const tileSize = mapData.tileSize;
+                for (let r = 0; r < mapData.height; r++) {
+                    for (let c = 0; c < mapData.width; c++) {
+                        const tileSpriteId = layer.data[r][c];
+                        if (tileSpriteId !== -1 && this._sprites[tileSpriteId]) {
+                            this._ctx.drawImage(this._sprites[tileSpriteId].image, 
+                                Math.floor(x + c * tileSize), 
+                                Math.floor(y + r * tileSize)
+                            );
+                        }
+                    }
+                }
+            },
+            rect: function(x, y, w, h, color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.fillStyle = color || PALETTE[7]; // Default white
+                this._ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+            },
+            rectb: function(x, y, w, h, color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.strokeStyle = color || PALETTE[7];
+                this._ctx.strokeRect(Math.floor(x) + 0.5, Math.floor(y) + 0.5, Math.floor(w)-1, Math.floor(h)-1); // +0.5 for sharp lines
+            },
+            circ: function(x, y, r, color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.fillStyle = color || PALETTE[7];
+                this._ctx.beginPath();
+                this._ctx.arc(Math.floor(x), Math.floor(y), Math.floor(r), 0, Math.PI * 2);
+                this._ctx.fill();
+            },
+            circb: function(x, y, r, color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.strokeStyle = color || PALETTE[7];
+                this._ctx.beginPath();
+                this._ctx.arc(Math.floor(x), Math.floor(y), Math.floor(r) - 0.5, 0, Math.PI * 2); // -0.5 for sharp lines
+                this._ctx.stroke();
+            },
+            line: function(x1, y1, x2, y2, color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.strokeStyle = color || PALETTE[7];
+                this._ctx.beginPath();
+                this._ctx.moveTo(Math.floor(x1) + 0.5, Math.floor(y1) + 0.5);
+                this._ctx.lineTo(Math.floor(x2) + 0.5, Math.floor(y2) + 0.5);
+                this._ctx.stroke();
+            },
+            text: function(str, x, y, color) {
+                if (typeof color === 'number') color = PALETTE[color % PALETTE.length];
+                this._ctx.fillStyle = color || PALETTE[7];
+                this._ctx.font = "8px 'Press Start 2P'"; // Standard retro game font size
+                this._ctx.fillText(str, Math.floor(x), Math.floor(y) + 8); // Y adjustment for text baseline
+            },
+
+            // Input
+            keyDown: function(keyName) { return !!this._input.keysDown[keyName]; },
+            keyUp: function(keyName) { return !!this._input.keysUp[keyName]; },
+            keyPress: function(keyName) { return !!this._input.keysPressed[keyName]; }, // Key just pressed this frame
+
+
+            // Collision & Map
+            collide: function(x, y, w, h, mapId, layerName) {
+                const mapData = this._maps[mapId];
+                if (!mapData) return false;
+                const layer = mapData.layers.find(l => l.name === layerName && l.type === 'collision');
+                if (!layer) return false;
+
+                const tileSize = mapData.tileSize;
+                const startTileX = Math.floor(x / tileSize);
+                const endTileX = Math.floor((x + w -1) / tileSize);
+                const startTileY = Math.floor(y / tileSize);
+                const endTileY = Math.floor((y + h -1) / tileSize);
+
+                for (let ty = startTileY; ty <= endTileY; ty++) {
+                    for (let tx = startTileX; tx <= endTileX; tx++) {
+                        if (tx < 0 || tx >= mapData.width || ty < 0 || ty >= mapData.height) continue; // Out of bounds
+                        if (layer.data[ty] && layer.data[ty][tx] === 1) { // 1 is solid
+                            return true; // Collision detected
+                        }
+                    }
+                }
+                return false;
+            },
+            getTile: function(mapId, layerName, tileX, tileY) {
+                const mapData = this._maps[mapId];
+                if (!mapData) return -1;
+                const layer = mapData.layers.find(l => l.name === layerName);
+                if (!layer) return -1;
+                if (tileX < 0 || tileX >= mapData.width || tileY < 0 || tileY >= mapData.height) return -1;
+                return layer.data[tileY] ? layer.data[tileY][tileX] : -1;
+            },
+            setTile: function(mapId, layerName, tileX, tileY, spriteId) {
+                const mapData = this._maps[mapId];
+                if (!mapData) return;
+                const layer = mapData.layers.find(l => l.name === layerName);
+                if (!layer) return;
+                 if (tileX < 0 || tileX >= mapData.width || tileY < 0 || tileY >= mapData.height) return;
+                if (layer.data[tileY]) layer.data[tileY][tileX] = spriteId;
+                // Note: This modification is only in the game's copy of the map data.
+                // It doesn't persist back to the editor unless specifically implemented.
+            },
+
+            // Sound (Placeholder)
+            sfx: function(id) {
+                // console.log(`SFX: Play sound ${id}`); // Placeholder
+                // Actual implementation would need an audio context and sound assets
+            },
+
+            // Utility
+            rnd: function(max) { return Math.floor(Math.random() * max); },
+            rndf: function(max) { return Math.random() * max; },
+        };
+
+        function startGame() {
+            if (gameRunning) stopGame();
+            logToConsole("Starting game...", 'info');
+            
+            // Reset input states
+            gameInputState = { keysDown: {}, keysPressed: {}, keysUp: {} };
+            GameAPI._input = gameInputState; // Ensure API uses the fresh state
+
+            // Prepare API with current project data
+            GameAPI._setup(gameCtx, currentProject);
+
+            try {
+                // Using new Function to create functions in the global scope (or a controlled scope)
+                // The 'this' inside these functions will refer to GameAPI._gameInstance
+                const userCode = currentProject.gameCode;
+                const fullCode = `
+                    ${userCode}
+                    return {
+                        init: typeof init === 'function' ? init : function() {},
+                        update: typeof update === 'function' ? update : function() {},
+                        draw: typeof draw === 'function' ? draw : function() {}
+                    };
+                `;
+                // Pass GameAPI as an argument to the sandboxed function
+                // This makes GameAPI available directly, not as a property of `this`
+                userGame = (new Function('GameAPI', fullCode))(GameAPI);
+
+                if (typeof userGame.init === 'function') {
+                    userGame.init.call(GameAPI._gameInstance); // Call init with gameInstance as 'this'
+                }
+            } catch (e) {
+                logToConsole(`Error during game initialization: ${e.message}\n${e.stack}`, 'error');
+                updateStatus("Game initialization error.");
+                return;
+            }
+
+            gameRunning = true;
+            lastFrameTime = performance.now();
+            gameLoop();
+            updateStatus("Game running.");
+        }
+
+        function stopGame() {
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            gameRunning = false;
+            logToConsole("Game stopped.", 'info');
+            updateStatus("Game stopped.");
+            // Clear input state on stop
+            gameInputState = { keysDown: {}, keysPressed: {}, keysUp: {} };
+            GameAPI._input = gameInputState;
+        }
+
+        function restartGame() {
+            stopGame();
+            // Small delay to ensure all states are cleared before restart
+            setTimeout(startGame, 100);
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+
+            const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.1); // Delta time in seconds, capped
+            lastFrameTime = timestamp;
+
+            // Update game logic
+            if (typeof userGame.update === 'function') {
+                try {
+                    userGame.update.call(GameAPI._gameInstance, dt);
+                } catch (e) {
+                    logToConsole(`Error in update(): ${e.message}\n${e.stack}`, 'error');
+                    stopGame();
+                    return;
+                }
+            }
+
+            // Draw game
+            if (typeof userGame.draw === 'function') {
+                try {
+                    // gameCtx.clearRect(0,0,gameCanvas.width, gameCanvas.height); // Optional: auto-clear, or let user do it with cls()
+                    userGame.draw.call(GameAPI._gameInstance);
+                } catch (e) {
+                    logToConsole(`Error in draw(): ${e.message}\n${e.stack}`, 'error');
+                    stopGame();
+                    return;
+                }
+            }
+            
+            // Reset per-frame input states (keysPressed, keysUp)
+            gameInputState.keysPressed = {};
+            gameInputState.keysUp = {};
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+        
+        function setupGlobalInputHandlers() {
+            window.addEventListener('keydown', (e) => {
+                if (currentMode !== 'play' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) {
+                    // Don't interfere with text input in editors
+                    // Allow specific shortcuts like Ctrl+S even in inputs
+                    if (e.ctrlKey && e.key === 's') {
+                        e.preventDefault();
+                        saveCurrentProject();
+                    } else if (e.ctrlKey && e.key === 'z' && currentMode === 'sprite') {
+                        e.preventDefault();
+                        spriteUndo();
+                    } else if (e.ctrlKey && e.key === 'y' && currentMode === 'sprite') {
+                        e.preventDefault();
+                        spriteRedo();
+                    }
+                    return;
+                }
+                
+                // Handle global shortcuts first
+                if (e.ctrlKey) {
+                    if (e.key === 's') { // Ctrl+S for Save
+                        e.preventDefault();
+                        saveCurrentProject();
+                        return;
+                    }
+                    if (currentMode === 'sprite') {
+                        if (e.key === 'z') { e.preventDefault(); spriteUndo(); return; } // Ctrl+Z for Undo
+                        if (e.key === 'y') { e.preventDefault(); spriteRedo(); return; } // Ctrl+Y for Redo
+                    }
+                }
+                
+                // Tool shortcuts (non-Ctrl)
+                if (currentMode === 'sprite' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'p': spriteEditorTool = 'pencil'; updateSpriteToolButtons(); e.preventDefault(); return;
+                        case 'e': spriteEditorTool = 'eraser'; updateSpriteToolButtons(); e.preventDefault(); return;
+                        case 'f': spriteEditorTool = 'fill'; updateSpriteToolButtons(); e.preventDefault(); return;
+                        case 'k': spriteEditorTool = 'picker'; updateSpriteToolButtons(); e.preventDefault(); return;
+                    }
+                }
+                if (currentMode === 'map' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                     switch(e.key.toLowerCase()) {
+                        case 'b': mapEditorTool = 'place'; updateMapToolButtons(); e.preventDefault(); return; // B for Brush/Place
+                        case 'e': mapEditorTool = 'erase'; updateMapToolButtons(); e.preventDefault(); return;
+                        case 'f': mapEditorTool = 'fill'; updateMapToolButtons(); e.preventDefault(); return;
+                    }
+                }
+
+
+                if (currentMode === 'play' && gameRunning) {
+                    e.preventDefault(); // Prevent default browser actions for game keys
+                    if (!gameInputState.keysDown[e.code]) { // Only set keysPressed if it wasn't already down
+                        gameInputState.keysPressed[e.code] = true;
+                    }
+                    gameInputState.keysDown[e.code] = true;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                 if (currentMode !== 'play' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+
+                if (currentMode === 'play' && gameRunning) {
+                    e.preventDefault();
+                    gameInputState.keysDown[e.code] = false;
+                    gameInputState.keysUp[e.code] = true;
+                }
+            });
+        }
+
+        // --- Game Export ---
+        function handleExportGame() {
+            if (!currentProject) {
+                alert("No project loaded to export.");
+                return;
+            }
+            updateStatus("Generating game export...");
+            logToConsole("Exporting game...");
+
+            // Ensure latest code is included
+            currentProject.gameCode = gameCodeEditor.value;
+
+            // Base64 encode sprite pixel data (or use a more compact format if preferred)
+            // For simplicity, we'll embed the direct pixel arrays.
+            // If sprites were large PNGs, base64 would be better.
+            // Here, JSON stringify is fine.
+
+            const gameData = {
+                sprites: currentProject.sprites.map(s => ({id: s.id, name: s.name, size: s.size, pixels: s.pixels})),
+                maps: currentProject.maps.map(m => ({
+                    id: m.id, name: m.name, width: m.width, height: m.height, tileSize: m.tileSize, layers: m.layers
+                })),
+                gameCode: currentProject.gameCode,
+                settings: currentProject.settings,
+                palette: PALETTE, // Embed palette
+            };
+            
+            // Minified GameAPI for export (could be more thorough)
+            // Important: The exported GameAPI should not rely on any RGMApp internal state or DOM elements from the editor.
+            // It needs to be self-contained.
+            const exportedGameAPISource = `
+const GameAPI = (() => {
+    let _ctx, _spritesData, _mapsData, _input, _gameInstance, _palette;
+    const TRANSPARENT_COLOR = null; // Match editor
+
+    // Simplified sprite image cache for exported game
+    const _spriteImageCache = new Map();
+    function getSpriteImage(sprite) {
+        if (_spriteImageCache.has(sprite.id)) {
+            return _spriteImageCache.get(sprite.id);
+        }
+        const canvas = document.createElement('canvas');
+        const size = sprite.size;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                const color = sprite.pixels[y][x];
+                if (color !== TRANSPARENT_COLOR) {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+        _spriteImageCache.set(sprite.id, canvas);
+        return canvas;
+    }
+
+    return {
+        _setup: function(ctx, gameData) {
+            this._ctx = ctx;
+            this._palette = gameData.palette;
+            this._spritesData = {};
+            gameData.sprites.forEach(s => {
+                this._spritesData[s.id] = { image: getSpriteImage(s), name: s.name, size: s.size };
+            });
+            this._mapsData = {};
+            gameData.maps.forEach(m => this._mapsData[m.id] = JSON.parse(JSON.stringify(m)));
+            this._input = { keysDown: {}, keysPressed: {}, keysUp: {} };
+            this._gameInstance = {};
+        },
+        cls: function(color) {
+            if (typeof color === 'number') color = this._palette[color % this._palette.length];
+            this._ctx.fillStyle = color || this._palette[0];
+            this._ctx.fillRect(0, 0, this._ctx.canvas.width, this._ctx.canvas.height);
+        },
+        sprite: function(id, x, y) {
+            const spriteData = this._spritesData[id];
+            if (spriteData) this._ctx.drawImage(spriteData.image, Math.floor(x), Math.floor(y));
+        },
+        tilemap: function(mapId, x, y, layerName) {
+            const mapData = this._mapsData[mapId];
+            if (!mapData) return;
+            const layer = mapData.layers.find(l => l.name === layerName && l.type === 'tile');
+            if (!layer) return;
+            const tileSize = mapData.tileSize;
+            for (let r = 0; r < mapData.height; r++) {
+                for (let c = 0; c < mapData.width; c++) {
+                    const tileSpriteId = layer.data[r][c];
+                    if (tileSpriteId !== -1 && this._spritesData[tileSpriteId]) {
+                        this._ctx.drawImage(this._spritesData[tileSpriteId].image, 
+                            Math.floor(x + c * tileSize), Math.floor(y + r * tileSize));
+                    }
+                }
+            }
+        },
+        rect: function(x,y,w,h,c) { if(typeof c==='number')c=this._palette[c%this._palette.length]; this._ctx.fillStyle=c||this._palette[7]; this._ctx.fillRect(Math.floor(x),Math.floor(y),Math.floor(w),Math.floor(h)); },
+        rectb: function(x,y,w,h,c) { if(typeof c==='number')c=this._palette[c%this._palette.length]; this._ctx.strokeStyle=c||this._palette[7]; this._ctx.strokeRect(Math.floor(x)+0.5,Math.floor(y)+0.5,Math.floor(w)-1,Math.floor(h)-1); },
+        circ: function(x,y,r,c) { if(typeof c==='number')c=this._palette[c%this._palette.length]; this._ctx.fillStyle=c||this._palette[7]; this._ctx.beginPath(); this._ctx.arc(Math.floor(x),Math.floor(y),Math.floor(r),0,Math.PI*2); this._ctx.fill(); },
+        circb: function(x,y,r,c) { if(typeof c==='number')c=this._palette[c%this._palette.length]; this._ctx.strokeStyle=c||this._palette[7]; this._ctx.beginPath(); this._ctx.arc(Math.floor(x),Math.floor(y),Math.floor(r)-0.5,0,Math.PI*2); this._ctx.stroke(); },
+        line: function(x1,y1,x2,y2,c) { if(typeof c==='number')c=this._palette[c%this._palette.length]; this._ctx.strokeStyle=c||this._palette[7]; this._ctx.beginPath(); this._ctx.moveTo(Math.floor(x1)+0.5,Math.floor(y1)+0.5); this._ctx.lineTo(Math.floor(x2)+0.5,Math.floor(y2)+0.5); this._ctx.stroke(); },
+        text: function(s,x,y,c) { if(typeof c==='number')c=this._palette[c%this._palette.length]; this._ctx.fillStyle=c||this._palette[7]; this._ctx.font="8px 'Press Start 2P', cursive"; this._ctx.fillText(s,Math.floor(x),Math.floor(y)+8); },
+        keyDown: function(k) { return !!this._input.keysDown[k]; },
+        keyUp: function(k) { return !!this._input.keysUp[k]; },
+        keyPress: function(k) { return !!this._input.keysPressed[k]; },
+        collide: function(x, y, w, h, mapId, layerName) {
+            const mapData = this._mapsData[mapId]; if (!mapData) return false;
+            const layer = mapData.layers.find(l => l.name === layerName && l.type === 'collision'); if (!layer) return false;
+            const tileSize = mapData.tileSize;
+            const stX = Math.floor(x/tileSize), edX = Math.floor((x+w-1)/tileSize);
+            const stY = Math.floor(y/tileSize), edY = Math.floor((y+h-1)/tileSize);
+            for (let ty = stY; ty <= edY; ty++) {
+                for (let tx = stX; tx <= edX; tx++) {
+                    if (tx<0||tx>=mapData.width||ty<0||ty>=mapData.height) continue;
+                    if (layer.data[ty]&&layer.data[ty][tx]===1) return true;
+                }
+            } return false;
+        },
+        getTile: function(mId,lName,tX,tY) { const m=this._mapsData[mId]; if(!m)return -1; const l=m.layers.find(ll=>ll.name===lName); if(!l)return -1; if(tX<0||tX>=m.width||tY<0||tY>=m.height)return -1; return l.data[tY]?l.data[tY][tX]:-1; },
+        setTile: function(mId,lName,tX,tY,sId) { const m=this._mapsData[mId]; if(!m)return; const l=m.layers.find(ll=>ll.name===lName); if(!l)return; if(tX<0||tX>=m.width||tY<0||tY>=m.height)return; if(l.data[tY])l.data[tY][tX]=sId; },
+        sfx: function(id) { /* console.log("SFX: " + id); */ }, // Sounds not implemented
+        rnd: function(max) { return Math.floor(Math.random()*max); },
+        rndf: function(max) { return Math.random()*max; },
+        print: function(msg) { console.log("GAME: " + msg); }
+    };
+})();`;
+
+            const gameRunnerSource = `
+let userGame = {};
+let gameRunning = false;
+let lastFrameTime = 0;
+let gameLoopId = null;
+const gameCanvas = document.getElementById('gameCanvas');
+const gameCtx = gameCanvas.getContext('2d');
+
+function startGame(gameData) {
+    gameCanvas.width = gameData.settings.gameCanvasWidth || 256;
+    gameCanvas.height = gameData.settings.gameCanvasHeight || 240;
+    document.title = gameData.name || "Retro Game";
+
+    GameAPI._setup(gameCtx, gameData);
+    
+    try {
+        const fullCode = gameData.gameCode + \`
+            return {
+                init: typeof init === 'function' ? init : function(){},
+                update: typeof update === 'function' ? update : function(){},
+                draw: typeof draw === 'function' ? draw : function(){}
+            };
+        \`;
+        userGame = (new Function('GameAPI', fullCode))(GameAPI);
+        if (typeof userGame.init === 'function') {
+            userGame.init.call(GameAPI._gameInstance);
+        }
+    } catch (e) {
+        console.error("Error during game initialization:", e);
+        alert("Error initializing game. Check console.");
+        return;
+    }
+
+    gameRunning = true;
+    lastFrameTime = performance.now();
+    gameLoop();
+}
+
+function gameLoop(timestamp) {
+    if (!gameRunning) return;
+    const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.1);
+    lastFrameTime = timestamp;
+
+    if (typeof userGame.update === 'function') {
+        try { userGame.update.call(GameAPI._gameInstance, dt); }
+        catch (e) { console.error("Error in update():", e); gameRunning = false; return; }
+    }
+    if (typeof userGame.draw === 'function') {
+        try { userGame.draw.call(GameAPI._gameInstance); }
+        catch (e) { console.error("Error in draw():", e); gameRunning = false; return; }
+    }
+    
+    GameAPI._input.keysPressed = {};
+    GameAPI._input.keysUp = {};
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('keydown', (e) => {
+    if (gameRunning) {
+        e.preventDefault();
+        if (!GameAPI._input.keysDown[e.code]) GameAPI._input.keysPressed[e.code] = true;
+        GameAPI._input.keysDown[e.code] = true;
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if (gameRunning) {
+        e.preventDefault();
+        GameAPI._input.keysDown[e.code] = false;
+        GameAPI._input.keysUp[e.code] = true;
+    }
+});
+
+// Optional CRT Filter Style
+const crtStyle = \`
+    #gameCanvas.crt-effect { position: relative; image-rendering: pixelated; }
+    #gameCanvas.crt-effect::after {
+        content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+        background: repeating-linear-gradient(transparent, transparent 1px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 2px);
+        pointer-events: none; z-index: 100;
+    } \`;
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = crtStyle + "body{margin:0; background:#000; display:flex; align-items:center; justify-content:center; height:100vh; overflow:hidden;} canvas{border:1px solid #333;}";
+document.head.appendChild(styleSheet);
+
+// Optional: Add Press Start 2P font
+const fontLink = document.createElement('link');
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
+fontLink.rel = 'stylesheet';
+document.head.appendChild(fontLink);
+
+
+// Watermark
+const watermark = document.createElement('div');
+watermark.textContent = 'Made with Retro Game Maker';
+watermark.style.position = 'absolute';
+watermark.style.bottom = '5px';
+watermark.style.right = '5px';
+watermark.style.fontSize = '10px';
+watermark.style.fontFamily = "'Press Start 2P', cursive";
+watermark.style.color = 'rgba(255,255,255,0.5)';
+watermark.style.zIndex = '101';
+document.body.appendChild(watermark);
+
+// Start game when data is loaded
+const RGM_GAME_DATA = ${JSON.stringify(gameData)};
+// Optionally enable CRT by default: document.getElementById('gameCanvas').classList.add('crt-effect');
+startGame(RGM_GAME_DATA);
+            `;
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${currentProject.name}</title>
+    <style>
+        /* Minimal styles, more in JS */
+        body { margin: 0; background-color: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        canvas { border: 1px solid #333; /* Default border, can be overridden by CRT */ }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        ${exportedGameAPISource}
+        ${gameRunnerSource}
+    <\/script>
+</body>
+</html>`;
+
+            downloadFile(`${currentProject.name}.html`, htmlContent, 'text/html');
+            updateStatus(`Game "${currentProject.name}.html" exported.`);
+            logToConsole("Game export complete.");
+        }
+
+
+        // --- Initialization ---
+        function init() {
+            // Load last project or create a new one
+            populateProjectListDropdown();
+            const projects = getSavedProjectNames();
+            if (projects.length > 0) {
+                // Try to load last active project name if stored, otherwise first in list
+                const lastProjectName = localStorage.getItem('rgm_last_project_name');
+                if (lastProjectName && projects.includes(lastProjectName)) {
+                    loadProject(localStorage.getItem(`rgm_project_${lastProjectName}`));
+                } else {
+                    loadProject(localStorage.getItem(`rgm_project_${projects[0]}`));
+                }
+            } else {
+                handleNewProject(); // Creates and loads a new project
+            }
+
+            // Setup UI and event listeners
+            modeSelector.onchange = (e) => switchMode(e.target.value);
+
+            // Project Management Buttons
+            newProjectBtn.onclick = handleNewProject;
+            loadProjectBtn.onclick = handleLoadProject;
+            saveProjectBtn.onclick = () => { saveCurrentProject(); updateStatus("Project saved manually."); };
+            deleteProjectBtn.onclick = handleDeleteProject;
+            importProjectBtn.onclick = handleImportProject;
+            exportProjectBtn.onclick = handleExportProject;
+            exportGameBtn.onclick = handleExportGame;
+            projectNameInput.onchange = (e) => {
+                const oldName = currentProject.name;
+                const newName = e.target.value.trim();
+                if (newName && newName !== oldName) {
+                    if (localStorage.getItem(`rgm_project_${newName}`)) {
+                        alert(`Project with name "${newName}" already exists. Choose a different name.`);
+                        projectNameInput.value = oldName; // Revert
+                        return;
+                    }
+                    localStorage.removeItem(`rgm_project_${oldName}`); // Remove old entry
+                    currentProject.name = newName;
+                    currentProjectNameDisplay.textContent = newName;
+                    saveCurrentProject(); // Save under new name
+                    populateProjectListDropdown(); // Refresh list with new name
+                    localStorage.setItem('rgm_last_project_name', newName);
+                } else if (!newName) {
+                    projectNameInput.value = oldName; // Revert if empty
+                }
+            };
+            crtFilterToggle.onchange = () => {
+                if (currentMode === 'play' && gameCanvasContainer) {
+                    gameCanvasContainer.classList.toggle('crt-effect', crtFilterToggle.checked);
+                }
+            };
+
+
+            // Sprite Editor Buttons & Controls
+            addSpriteBtn.onclick = handleAddSprite;
+            deleteSpriteBtn.onclick = handleDeleteSprite;
+            spritePencilToolBtn.onclick = () => { spriteEditorTool = 'pencil'; updateSpriteToolButtons(); };
+            spriteEraserToolBtn.onclick = () => { spriteEditorTool = 'eraser'; updateSpriteToolButtons(); };
+            spriteFillToolBtn.onclick = () => { spriteEditorTool = 'fill'; updateSpriteToolButtons(); };
+            spritePickerToolBtn.onclick = () => { spriteEditorTool = 'picker'; updateSpriteToolButtons(); };
+            spriteUndoBtn.onclick = spriteUndo;
+            spriteRedoBtn.onclick = spriteRedo;
+            spriteSizeSelector.onchange = handleSpriteSizeChange;
+            clearSpriteBtn.onclick = () => {
+                 if (confirm("Are you sure you want to clear the sprite? This will add to undo history.")) {
+                    clearSpriteCanvas(true);
+                 }
+            };
+            spriteImportJsonBtn.onclick = handleSpriteImportJSON;
+            spriteExportJsonBtn.onclick = handleSpriteExportJSON;
+            spriteImportPngBtn.onclick = handleSpriteImportPNG;
+            spriteExportPngBtn.onclick = handleSpriteExportPNG;
+
+            // Map Editor Buttons & Controls
+            addMapBtn.onclick = handleAddMap;
+            deleteMapBtn.onclick = handleDeleteMap;
+            mapPlaceToolBtn.onclick = () => { mapEditorTool = 'place'; updateMapToolButtons(); };
+            mapEraseToolBtn.onclick = () => { mapEditorTool = 'erase'; updateMapToolButtons(); };
+            mapFillToolBtn.onclick = () => { mapEditorTool = 'fill'; updateMapToolButtons(); };
+            mapZoomSelector.onchange = handleMapZoomChange;
+            resizeMapBtn.onclick = handleMapResize;
+            addMapLayerBtn.onclick = () => handleAddMapLayer(true);
+            removeMapLayerBtn.onclick = handleRemoveMapLayer;
+            mapLayerSelector.onchange = handleMapLayerChange;
+            mapLayerVisibleToggle.onchange = handleMapLayerPropertyChange;
+            mapLayerTypeSelector.onchange = handleMapLayerPropertyChange;
+            showCollisionLayerToggle.onchange = (e) => {
+                showCollisionOverlay = e.target.checked;
+                if (activeMapId) drawMapOnEditorCanvas();
+            };
+
+            // Code Editor: gameCodeEditor auto-saves with project. Manual save also covers it.
+            gameCodeEditor.addEventListener('input', () => {
+                // Could add a "dirty" flag here if not auto-saving frequently
+            });
+
+            // Play Mode Buttons
+            playGameBtn.onclick = startGame;
+            stopGameBtn.onclick = stopGame;
+            restartGameBtn.onclick = restartGame;
+
+            // Modal prompt buttons
+            promptOkBtn.onclick = () => {
+                if (promptResolve) promptResolve(promptInput.value);
+                hidePrompt();
+            };
+            promptCancelBtn.onclick = () => {
+                if (promptResolve) promptResolve(null); // Resolve with null on cancel
+                hidePrompt();
+            };
+
+            // Global event listeners (keyboard shortcuts, etc.)
+            setupGlobalInputHandlers();
+            
+            // Set initial mode
+            switchMode('sprite'); // Default to sprite editor
+
+            // Auto-save setup
+            startAutoSave();
+            window.addEventListener('beforeunload', () => {
+                if (currentProject && currentProject.name) {
+                    localStorage.setItem('rgm_last_project_name', currentProject.name);
+                }
+                stopAutoSave(); // Clean up timer
+            });
+
+            updateStatus("Retro Game Maker initialized.");
+            logToConsole("Welcome to Retro Game Maker!");
+        }
+
+        return {
+            init: init
+        };
+    })();
+
+    window.addEventListener('DOMContentLoaded', RGMApp.init);
+    </script>
+</body>
+</html>
